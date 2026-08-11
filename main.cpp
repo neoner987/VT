@@ -5,7 +5,7 @@
 #include <string>
 #include <cstdlib>
 #include <vector>
-#include </home/bayayayo/Документи/GitHub/VT/Tokenization.h>
+#include "Tokenization.h"
 
 
 void Asemble(std::vector<Token> tokens) {
