@@ -6,25 +6,10 @@
 #include <cstdlib>
 #include <vector>
 #include "Tokenization.h"
+#include "Parser.h"
+#include "Generation.h"
 
 
-void Asemble(std::vector<Token> tokens) {
-    std::ofstream outFile("./built/assembly.asm", std::ios::out);
-
-    outFile << "global _start:" << std::endl;
-    outFile << "_start:" << std::endl;
-    try {
-        if (tokens[0].Type == TokenType::exit && tokens[1].Type == TokenType::int_lit && tokens[2].Type ==
-            TokenType::semi) {
-            outFile << "\tmov rax, 60" << std::endl;
-            outFile << "\t" << "mov rdi, " << tokens[1].Value->c_str() << std::endl;
-            outFile << "\tsyscall" << std::endl;
-            }
-    } catch (std::exception &e) {
-        std::cerr << "Bruh! u have not enough Tokens " << std::endl;
-    }
-    outFile.close();
-}
 
 
 int main() {
@@ -40,9 +25,16 @@ int main() {
     }
 
     Tokenizer tokenizer(std::move(text));
-
     std::vector<Token> Tokens = tokenizer.Tokenize();
-    Asemble(Tokens);
+    Parser parser(Tokens);
+    if (auto exit_node = parser.parse()) {
+        Generation generation(exit_node.value(), "./built/assembly.asm");
+        generation.generate_assembly();
+    }
+    else {
+        std::cout << "Boob";
+    }
+
 
     std::system("nasm -felf64 ./built/assembly.asm -o ./built/assembly.o && ld ./built/assembly.o -o ./built/assembly");
     return 0;
