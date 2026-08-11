@@ -27,16 +27,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="bc7928cb-e2c8-478e-9261-fbb207f5c26c" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Generation.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Parser.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Tokenization.h" beforeDir="false" afterPath="$PROJECT_DIR$/Tokenization.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/built/assembly" beforeDir="false" afterPath="$PROJECT_DIR$/built/assembly" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/built/assembly.asm" beforeDir="false" afterPath="$PROJECT_DIR$/built/assembly.asm" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/built/assembly.o" beforeDir="false" afterPath="$PROJECT_DIR$/built/assembly.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main" beforeDir="false" afterPath="$PROJECT_DIR$/main" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Проєкт.VT" beforeDir="false" afterPath="$PROJECT_DIR$/Проєкт.VT" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -161,7 +152,7 @@
       <workItem from="1785919887804" duration="342000" />
       <workItem from="1785920256222" duration="160000" />
       <workItem from="1785920429299" duration="2482000" />
-      <workItem from="1786483446555" duration="5167000" />
+      <workItem from="1786483446555" duration="5414000" />
     </task>
     <servers />
   </component>

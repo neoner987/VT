@@ -55,7 +55,7 @@ struct Token {
 
 class Tokenizer {
 public:
-    inline explicit Tokenizer(const std::string src)
+    inline explicit Tokenizer(std::string src)
         : m_src(std::move(src)) {
     }
 
@@ -80,7 +80,7 @@ public:
                         tokens.push_back(Token(TokenType::exit));
                         buffer.clear();
                     } else {
-                        std::cout << " Bruh! Wrone Token." << std::endl;
+                        std::cout << " Bruh! Wrong Token." << std::endl;
                         break;
                     }
                 }
@@ -99,7 +99,7 @@ public:
             } else if (isspace(peak().value())) {
                 consume();
             } else {
-                std::cout << " Bruh! wrone syntacys" << std::endl;
+                std::cout << " Bruh! wrong syntacys" << std::endl;
                 break;
             }
         }
@@ -108,7 +108,7 @@ public:
     }
 
 private:
-    [[nodiscard]] std::optional<char> peak(int offset = 0) const {
+    [[nodiscard]] inline std::optional<char> peak(int offset = 0) const {
         if (m_index + offset >= m_src.length()) {
             return {};
         } else {
@@ -116,10 +116,10 @@ private:
         }
     };
 
-    char consume() {
+    inline char consume() {
         return m_src.at(m_index++);
     }
 
     const std::string m_src;
-    int m_index = 0;
+    size_t m_index = 0;
 };
