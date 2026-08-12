@@ -62,17 +62,17 @@ public:
     inline std::vector<Token> Tokenize() {
         std::vector<Token> tokens;
         std::string buffer{};
-        while (peak().has_value()) {
-            if (peak(1).has_value()) {
-                if (isCyrillicLetter(peak().value(), peak(1).value()) && !isdigit(peak().value())) {
+        while (peek().has_value()) {
+            if (peek(1).has_value()) {
+                if (isCyrillicLetter(peek().value(), peek(1).value()) && !isdigit(peek().value())) {
                     buffer.push_back(consume());
                     buffer.push_back(consume());
-                    while ((isCyrillicLetter(peak().value(), peak(1).value()) || isdigit(peak().value())) && peak().
+                    while ((isCyrillicLetter(peek().value(), peek(1).value()) || isdigit(peek().value())) && peek().
                            has_value()) {
-                        if (isCyrillicLetter(peak().value(), peak(1).value())) {
+                        if (isCyrillicLetter(peek().value(), peek(1).value())) {
                             buffer.push_back(consume());
                             buffer.push_back(consume());
-                        } else if (isdigit(peak().value()) || isAsciiAlnum(peak().value())) {
+                        } else if (isdigit(peek().value()) || isAsciiAlnum(peek().value())) {
                             buffer.push_back(consume());
                         }
                     }
@@ -85,18 +85,18 @@ public:
                     }
                 }
             }
-            if (isdigit(peak().value())) {
+            if (isdigit(peek().value())) {
                 buffer.push_back(consume());
-                while (isdigit(peak().value()) && peak().has_value()) {
+                while (isdigit(peek().value()) && peek().has_value()) {
                     buffer.push_back(consume());
-                    if (not peak(1).has_value()) { break; }
+                    if (not peek(1).has_value()) { break; }
                 }
                 tokens.push_back(Token(TokenType::int_lit, buffer));
                 buffer.clear();
-            } else if (peak().value() == ';') {
+            } else if (peek().value() == ';') {
                 tokens.push_back(Token(TokenType::semi));
                 consume();
-            } else if (isspace(peak().value())) {
+            } else if (isspace(peek().value())) {
                 consume();
             } else {
                 std::cout << " Bruh! wrong syntacys" << std::endl;
@@ -108,7 +108,7 @@ public:
     }
 
 private:
-    [[nodiscard]] inline std::optional<char> peak(int offset = 0) const {
+    [[nodiscard]] inline std::optional<char> peek(int offset = 0) const {
         if (m_index + offset >= m_src.length()) {
             return {};
         } else {
