@@ -1,5 +1,5 @@
 #pragma once
-
+#include "Tokenization.h"
 
 
 namespace Node {
@@ -38,19 +38,31 @@ public:
         while (peek().has_value()) {
             if (peek().value().Type == TokenType::exit) {
                 consume();
-                if (auto node_expr = parse_expr()) {
-                    exit_node = Node::NodeExit { .m_expr = node_expr.value() };
-                }
-                else {
-                    std::cout << "Bruh! Invalid expr after exit.";
-                    exit(EXIT_FAILURE);
-                }
-                if (!peek().has_value() || peek().value().Type != TokenType::semi) {
-                    std::cout << "Bruh! No semi after exit T_T ";
-                    exit(EXIT_FAILURE);
-                }
-                else {
+                if (peek().value().Type == TokenType::open_parent) {
                     consume();
+                    if (auto node_expr = parse_expr()) {
+                        exit_node = Node::NodeExit { .m_expr = node_expr.value() };
+                        if (peek().has_value() && peek().value().Type == TokenType::close_parent) {
+                            consume();
+                            if (!peek().has_value() || peek().value().Type != TokenType::semi) {
+                                std::cout << "Bruh! No semi after exit T_T ";
+                                exit(EXIT_FAILURE);
+                            }
+                            else {
+                                consume();
+                            }
+                        }
+                        else {
+                            std::cout << "Bruh! No open parenthesis.";
+                        }
+                    }
+                    else {
+                        std::cout << "Bruh! Invalid expr after exit.";
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else {
+                    std::cout << "Bruh! No open parenthesis.";
                 }
             }
         }

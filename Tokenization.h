@@ -19,7 +19,9 @@ bool isCyrillicLetter(unsigned char b1, unsigned char b2) {
 enum class TokenType {
     exit,
     int_lit,
-    semi
+    semi,
+    open_parent,
+    close_parent,
 };
 
 
@@ -67,8 +69,7 @@ public:
                 if (isCyrillicLetter(peek().value(), peek(1).value()) && !isdigit(peek().value())) {
                     buffer.push_back(consume());
                     buffer.push_back(consume());
-                    while ((isCyrillicLetter(peek().value(), peek(1).value()) || isdigit(peek().value())) && peek().
-                           has_value()) {
+                    while ((isCyrillicLetter(peek().value(), peek(1).value()) || isdigit(peek().value())) && peek().has_value()) {
                         if (isCyrillicLetter(peek().value(), peek(1).value())) {
                             buffer.push_back(consume());
                             buffer.push_back(consume());
@@ -79,9 +80,14 @@ public:
                     if (buffer == "вийти") {
                         tokens.push_back(Token(TokenType::exit));
                         buffer.clear();
-                    } else {
+                    }
+                    else if (buffer == "ціле") {
                         std::cout << " Bruh! Wrong Token." << std::endl;
-                        break;
+                        exit(EXIT_FAILURE);
+                    }
+                    else {
+                        std::cout << " Bruh! Wrong Token." << std::endl;
+                        exit(EXIT_FAILURE);
                     }
                 }
             }
@@ -93,7 +99,13 @@ public:
                 }
                 tokens.push_back(Token(TokenType::int_lit, buffer));
                 buffer.clear();
-            } else if (peek().value() == ';') {
+            }else if (peek().value() =='(') {
+                consume();
+                tokens.push_back(Token(TokenType::open_parent));
+            }else if (peek().value() ==  ')') {
+                consume();
+                tokens.push_back(Token(TokenType::close_parent));
+            }else if (peek().value() == ';') {
                 tokens.push_back(Token(TokenType::semi));
                 consume();
             } else if (isspace(peek().value())) {
