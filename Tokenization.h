@@ -22,6 +22,9 @@ enum class TokenType {
     semi,
     open_parent,
     close_parent,
+    ident,
+    _int,
+    eq
 };
 
 
@@ -37,8 +40,23 @@ struct Token {
             case TokenType::int_lit:
                 std::cout << Value->c_str();
                 break;
+            case TokenType::open_parent:
+                std::cout << "(";
+                break;
+            case TokenType::close_parent:
+                std::cout << ")";
+                break;
             case TokenType::semi:
                 std::cout << ";\n";
+                break;
+            case TokenType::_int:
+                std::cout << "ціле ";
+                break;
+            case TokenType::eq:
+                std::cout << "= ";
+                break;
+            case TokenType::ident:
+                std::cout << Value->c_str() << " ";
                 break;
         }
     }
@@ -82,12 +100,12 @@ public:
                         buffer.clear();
                     }
                     else if (buffer == "ціле") {
-                        std::cout << " Bruh! Wrong Token." << std::endl;
-                        exit(EXIT_FAILURE);
+                        tokens.push_back(Token(TokenType::_int));
+                        buffer.clear();
                     }
                     else {
-                        std::cout << " Bruh! Wrong Token." << std::endl;
-                        exit(EXIT_FAILURE);
+                        tokens.push_back(Token(TokenType::ident, buffer));
+                        buffer.clear();
                     }
                 }
             }
@@ -105,6 +123,10 @@ public:
             }else if (peek().value() ==  ')') {
                 consume();
                 tokens.push_back(Token(TokenType::close_parent));
+            }
+            else if (peek().value() ==  '=') {
+                consume();
+                tokens.push_back(Token(TokenType::eq));
             }else if (peek().value() == ';') {
                 tokens.push_back(Token(TokenType::semi));
                 consume();

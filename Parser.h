@@ -1,15 +1,38 @@
 #pragma once
+#include <variant>
+
 #include "Tokenization.h"
 
 
 namespace Node {
 
-    struct NodeExpr {
-        Token m_int_lit;
+    struct NodeExprIntLit {
+        Token int_lit;
     };
 
-    struct NodeExit {
-        NodeExpr m_expr;
+    struct NodeExprIdent {
+        Token ident;
+    };
+
+    struct NodeExpr {
+        std::variant<NodeExprIdent, NodeExprIntLit> expr;
+    };
+
+
+    struct NodeStmtExit {
+        NodeExpr expr;
+    };
+    struct NodeStmtInt {
+        Token ident;
+        NodeExpr expr;
+    };
+
+    struct NodeStmt {
+        std::variant<NodeStmtExit, NodeStmtInt> var;
+    };
+
+    struct NodeProg {
+        std::vector<NodeStmt> stmts;
     };
 
 }
@@ -28,20 +51,27 @@ public:
     std::optional<Node::NodeExpr> parse_expr() {
         if (peek().has_value() && peek().value().Type == TokenType::int_lit) {
             return Node::NodeExpr {
-                .m_int_lit = consume()
+                .expr = Node::NodeExprIntLit{ .int_lit = consume() }
             };
         }
+        else if (peek().has_value() && peek().value().Type == TokenType::ident) {
+            if (peek().value().Type == TokenType::ident) {
+                return Node::NodeExpr { .expr = Node::NodeExprIdent{ .ident = consume() } };
+            }
+        }
+        return {};
+
     }
 
-    std::optional<Node::NodeExit> parse() {
-        std::optional<Node::NodeExit> exit_node;
-        while (peek().has_value()) {
+    std::optional<Node::NodeStmt> parse_stmt() {
+        std::optional<Node::NodeStmt> stmt_node;
+        if (peek().has_value() && peek().value().Type == TokenType::exit) {
             if (peek().value().Type == TokenType::exit) {
                 consume();
                 if (peek().value().Type == TokenType::open_parent) {
                     consume();
                     if (auto node_expr = parse_expr()) {
-                        exit_node = Node::NodeExit { .m_expr = node_expr.value() };
+                        stmt_node = Node::NodeStmt{ .var = Node::NodeStmtExit { .expr = node_expr.value() }};
                         if (peek().has_value() && peek().value().Type == TokenType::close_parent) {
                             consume();
                             if (!peek().has_value() || peek().value().Type != TokenType::semi) {
@@ -66,18 +96,74 @@ public:
                 }
             }
         }
-        m_index = 0;
-        return exit_node;
+        else if (peek().has_value() && peek().value().Type == TokenType::_int) {
+            consume();
+            if (peek().value().Type == TokenType::ident) {
+                Token ident = consume();
+                if (peek().value().Type == TokenType::eq) {
+                    consume();
+                    if (auto node_expr = parse_expr()) {
+                        if (peek().value().Type == TokenType::semi) {
+                            consume();
+                            stmt_node = Node::NodeStmt{
+                                .var = Node::NodeStmtInt{
+                                    .ident = ident,
+                                    .expr = node_expr.value()
+                                }
+                            };
+                        }
+                        else {
+                            std::cout << "Bruh! No semi.";
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                    else {
+                        std::cout << "Bruh! No value after ident T_T ";
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else {
+                    std::cout << "Bruh! No = after ident T_T ";
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else {
+                std::cout << "Bruh! Invalid or no ident.";
+                exit(EXIT_FAILURE);
+            }
+        }
+        else {
+            std::cout << "Bruh! Invalid stmt";
+            exit(EXIT_FAILURE);
+        }
+        return stmt_node;
     }
+
+    std::optional<Node::NodeProg> parse_prog() {
+        std::optional<Node::NodeProg> prog_nodes;
+        std::vector<Node::NodeStmt>stmts;
+        while (peek().has_value()) {
+            if (auto node_stmt = parse_stmt()) {
+                stmts.push_back(node_stmt.value());
+            }
+            else {
+                std::cout << "Bruh! Invalid stmt T_T ";
+                exit(EXIT_FAILURE);
+            }
+        }
+        prog_nodes = Node::NodeProg{ .stmts = stmts };
+        return prog_nodes;
+    }
+
 
 
 private:
     [[nodiscard]] inline std::optional<Token> peek(int offset = 0) const {
         if (m_index + offset >= m_tokens.size()) {
             return {};
-        } else {
-            return m_tokens[m_index + offset];
         }
+        return m_tokens[m_index + offset];
+
     };
 
     inline Token consume() {

@@ -27,15 +27,17 @@ int main() {
     Tokenizer tokenizer(std::move(text));
     std::vector<Token> Tokens = tokenizer.Tokenize();
     Parser parser(Tokens);
-    if (auto exit_node = parser.parse()) {
-        Generation generation(exit_node.value(), "./built/assembly.asm");
-        generation.generate_assembly();
+    if (auto prog = parser.parse_prog()) {
+        Generator generator(prog.value());
+        std::ofstream output_file("./built/output.asm");
+        output_file << generator.gen_prog().str();
+        output_file.close();
     }
     else {
         std::cout << "Boob";
     }
 
 
-    std::system("nasm -felf64 ./built/assembly.asm -o ./built/assembly.o && ld ./built/assembly.o -o ./built/assembly");
+    std::system("nasm -felf64 ./built/output.asm -o ./built/output.o && ld ./built/output.o -o ./built/output");
     return 0;
 }
