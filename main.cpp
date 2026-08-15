@@ -5,9 +5,9 @@
 #include <string>
 #include <cstdlib>
 #include <vector>
-#include "Tokenization.h"
-#include "Parser.h"
-#include "Generation.h"
+#include "Tokenization.hpp"
+#include "Parser.hpp"
+#include "Generation.hpp"
 
 
 
