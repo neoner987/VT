@@ -11,8 +11,9 @@ bool isAsciiAlnum(unsigned char c) {
 }
 
 bool isCyrillicLetter(unsigned char b1, unsigned char b2) {
-    int codepoint = ((b1 & 0x1F) << 6) | (b2 & 0x3F);
-    return (codepoint >= 0x0400 && codepoint <= 0x04FF);
+    if (b1 == 0xD0 && (b2 >= 0x80 && b2 <= 0xBF)) return true;
+    if (b1 == 0xD1 && (b2 >= 0x80 && b2 <= 0xBF)) return true;
+    return false;
 }
 
 
@@ -90,7 +91,7 @@ public:
                     buffer.push_back(consume());
                     buffer.push_back(consume());
                     while ((isCyrillicLetter(peek().value(), peek(1).value()) || isdigit(peek().value())) && peek().has_value()) {
-                        if (isCyrillicLetter(peek().value(), peek(1).value())) {
+                        if ((isCyrillicLetter(peek().value(), peek(1).value())) ){
                             buffer.push_back(consume());
                             buffer.push_back(consume());
                         } else if (isdigit(peek().value()) || isAsciiAlnum(peek().value())) {
