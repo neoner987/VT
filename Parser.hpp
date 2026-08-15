@@ -81,9 +81,7 @@ public:
                 return term;
             }
         }
-        else {
-            return {};
-        }
+        return {};
     }
 
     std::optional<NodeExpr*> parse_expr() {
@@ -96,10 +94,8 @@ public:
                     lhs_expr->var = term.value();
                     bin_expr_add->lhs = lhs_expr;
                     consume();
-                    if (auto rhs = parse_term()) {
-                        auto rhs_expr = m_allocator.alloc<NodeExpr>();
-                        rhs_expr->var = rhs.value();
-                        bin_expr_add->rhs = rhs_expr;
+                    if (auto rhs = parse_expr()) {
+                        bin_expr_add->rhs = rhs.value();;
                         bin_expr->var = bin_expr_add;
                         auto expr = m_allocator.alloc<NodeExpr>();
                         expr->var = bin_expr;
@@ -115,10 +111,8 @@ public:
                     lhs_expr->var = term.value();
                     bin_expr_mult->lhs = lhs_expr;
                     consume();
-                    if (auto rhs = parse_term()) {
-                        auto rhs_expr = m_allocator.alloc<NodeExpr>();
-                        rhs_expr->var = rhs.value();
-                        bin_expr_mult->rhs = rhs_expr;
+                    if (auto rhs = parse_expr()) {
+                        bin_expr_mult->rhs = rhs.value();
                         bin_expr->var = bin_expr_mult;
                         auto expr = m_allocator.alloc<NodeExpr>();
                         expr->var = bin_expr;
@@ -145,81 +139,39 @@ public:
 
     std::optional<NodeStmt*> parse_stmt() {
         if (peek().has_value() && peek().value().Type == TokenType::exit) {
-            if (peek().value().Type == TokenType::exit) {
-                consume();
-                if (peek().value().Type == TokenType::open_parent) {
-                    consume();
-                    if (auto node_expr = parse_expr()) {
-                        if (peek().has_value() && peek().value().Type == TokenType::close_parent) {
-                            consume();
-                            if (peek().has_value() || peek().value().Type != TokenType::semi) {
-                                consume();
-                                auto node_stmt = m_allocator.alloc<NodeStmtExit>();
-                                node_stmt->expr = node_expr.value();
-                                auto stmt_node = m_allocator.alloc<NodeStmt>();
-                                stmt_node->var = node_stmt;
-                                return stmt_node;
-
-                            }
-                            else {
-                                std::cout << "Bruh! No semi after exit T_T ";
-                                exit(EXIT_FAILURE);
-                            }
-                        }
-                        else {
-                            std::cout << "Bruh! No open parenthesis.";
-                        }
-                    }
-                    else {
-                        std::cout << "Bruh! Invalid expr after exit.";
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                else {
-                    std::cout << "Bruh! No open parenthesis.";
-                }
+            consume();
+            try_consume(TokenType::open_parent, "Bruh! No open parenthesis.");
+            if (auto node_expr = parse_expr()) {
+                try_consume(TokenType::close_parent, "Bruh! No open parenthesis.");
+                try_consume(TokenType::semi, "Bruh! No semi after exit T_T ");
+                auto node_stmt = m_allocator.alloc<NodeStmtExit>();
+                node_stmt->expr = node_expr.value();
+                auto stmt_node = m_allocator.alloc<NodeStmt>();
+                stmt_node->var = node_stmt;
+                return stmt_node;
             }
+            std::cout << "Bruh! Invalid expr after exit.";
+            exit(EXIT_FAILURE);
+
         }
         else if (peek().has_value() && peek().value().Type == TokenType::_int) {
             consume();
-            if (peek().value().Type == TokenType::ident) {
-                Token ident = consume();
-                if (peek().value().Type == TokenType::eq) {
-                    consume();
-                    if (auto node_expr = parse_expr()) {
-                        if (peek().value().Type == TokenType::semi) {
-                            consume();
-                            auto node_stmt = m_allocator.alloc<NodeStmtInt>();
-                            node_stmt->expr = node_expr.value();
-                            node_stmt->ident = ident;
-                            auto stmt_node = m_allocator.alloc<NodeStmt>();
-                            stmt_node->var = node_stmt;
-                            return stmt_node;
-                        }
-                        else {
-                            std::cout << "Bruh! No semi.";
-                            exit(EXIT_FAILURE);
-                        }
-                    }
-                    else {
-                        std::cout << "Bruh! No value after ident T_T ";
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                else {
-                    std::cout << "Bruh! No = after ident T_T ";
-                    exit(EXIT_FAILURE);
-                }
+            Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
+            try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
+            if (auto node_expr = parse_expr()) {
+                try_consume(TokenType::semi, "Bruh! No semi.");
+                auto node_stmt = m_allocator.alloc<NodeStmtInt>();
+                node_stmt->expr = node_expr.value();
+                node_stmt->ident = ident;
+                auto stmt_node = m_allocator.alloc<NodeStmt>();
+                stmt_node->var = node_stmt;
+                return stmt_node;
             }
-            else {
-                std::cout << "Bruh! Invalid or no ident.";
-                exit(EXIT_FAILURE);
-            }
-        }
-        else {
-            std::cout << "Bruh! Invalid stmt";
+            std::cout << "Bruh! No value after = T_T ";
             exit(EXIT_FAILURE);
         }
+        std::cout << "Bruh! Invalid stmt";
+        exit(EXIT_FAILURE);
 
     }
 
@@ -242,6 +194,7 @@ public:
 
 
 private:
+    // ReSharper disable once CppDFAConstantParameter
     [[nodiscard]] inline std::optional<Token> peek(int offset = 0) const {
         if (m_index + offset >= m_tokens.size()) {
             return {};
@@ -252,6 +205,16 @@ private:
 
     inline Token consume() {
         return m_tokens[m_index++];
+    }
+
+    inline Token try_consume(TokenType type, const std::string msg) {
+        if (peek().has_value() && peek().value().Type == type) {
+            return consume();
+        }
+        else {
+            std::cout << msg << std::endl;
+            exit(EXIT_FAILURE);
+        }
     }
     size_t m_index = 0;
     const std::vector<Token> m_tokens;
