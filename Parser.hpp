@@ -16,19 +16,24 @@ struct NodeTermIdent {
 struct NodeExpr;
 
 
+struct NodeBinExprAdd {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
+struct NodeBinExprSub {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
+};
+
 struct NodeBinExprMult {
     NodeExpr* lhs;
     NodeExpr* rhs;
 
 };
 
-struct NodeBinExprAdd {
-    NodeExpr* lhs;
-    NodeExpr* rhs;
-};
-
 struct NodeBinExpr {
-    std::variant<NodeBinExprAdd*, NodeBinExprMult*> var;
+    std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMult*> var;
 };
 
 struct NodeTerm {
@@ -86,7 +91,8 @@ public:
 
     std::optional<NodeExpr*> parse_expr() {
         if (auto term = parse_term()) {
-            if (peek().has_value() && (peek().value().Type == TokenType::plus || peek().value().Type == TokenType::mult )) {
+            if (peek().has_value() && (peek().value().Type == TokenType::plus || peek().value().Type == TokenType::mult
+                || peek().value().Type == TokenType::minus )) {
                 auto bin_expr = m_allocator.alloc<NodeBinExpr>();
                 if (peek().value().Type == TokenType::plus) {
                     auto bin_expr_add = m_allocator.alloc<NodeBinExprAdd>();
@@ -97,6 +103,23 @@ public:
                     if (auto rhs = parse_expr()) {
                         bin_expr_add->rhs = rhs.value();;
                         bin_expr->var = bin_expr_add;
+                        auto expr = m_allocator.alloc<NodeExpr>();
+                        expr->var = bin_expr;
+                        return expr;
+                    }
+                    else {
+                        std::cout << "Bruh! Expected expr";
+                    }
+                }
+                else if (peek().value().Type == TokenType::minus) {
+                    auto bin_expr_sub = m_allocator.alloc<NodeBinExprSub>();
+                    auto lhs_expr = m_allocator.alloc<NodeExpr>();
+                    lhs_expr->var = term.value();
+                    bin_expr_sub->lhs = lhs_expr;
+                    consume();
+                    if (auto rhs = parse_expr()) {
+                        bin_expr_sub->rhs = rhs.value();;
+                        bin_expr->var = bin_expr_sub;
                         auto expr = m_allocator.alloc<NodeExpr>();
                         expr->var = bin_expr;
                         return expr;

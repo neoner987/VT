@@ -37,16 +37,24 @@ public:
         struct BinExprVisitor {
             Generator* gen;
             void operator()(const NodeBinExprAdd* add_expr) const {
-                gen->gen_expr(add_expr->lhs);
                 gen->gen_expr(add_expr->rhs);
+                gen->gen_expr(add_expr->lhs);
                 gen->pop("rax");
                 gen->pop("rbx");
                 gen->m_output << "\tadd rax, rbx" << "\n";
                 gen->push("rax");
             }
+            void operator()(const NodeBinExprSub* sub_expr) const {
+                gen->gen_expr(sub_expr->rhs);
+                gen->gen_expr(sub_expr->lhs);
+                gen->pop("rax");
+                gen->pop("rbx");
+                gen->m_output << "\tsub rax, rbx" << "\n";
+                gen->push("rax");
+            }
             void operator()(const NodeBinExprMult* mult_expr) const {
-                gen->gen_expr(mult_expr->lhs);
                 gen->gen_expr(mult_expr->rhs);
+                gen->gen_expr(mult_expr->lhs);
                 gen->pop("rax");
                 gen->pop("rbx");
                 gen->m_output << "\timul rax, rbx" << "\n";

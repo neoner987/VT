@@ -27,6 +27,7 @@ enum class TokenType {
     _int,
     eq,
     plus,
+    minus,
     mult
 };
 
@@ -139,6 +140,9 @@ public:
             }else if (peek().value() ==  '*') {
                 consume();
                 tokens.push_back(Token(TokenType::mult));
+            }else if (peek().value() ==  '-') {
+                consume();
+                tokens.push_back(Token(TokenType::minus));
             } else if (isspace(peek().value())) {
                 consume();
             } else {
