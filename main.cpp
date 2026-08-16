@@ -12,13 +12,13 @@
 
 
 
-int main(std::string filePath) {
+int main(int argc, char* argv[]) {
 
 
     std::string text;
     {
         std::fstream file;
-        file.open(filePath, std::ios::in);
+        file.open(argv[1], std::ios::in);
         std::stringstream strStream;
         strStream << file.rdbuf();
         text = strStream.str();
