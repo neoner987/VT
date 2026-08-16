@@ -107,9 +107,8 @@ public:
                         expr->var = bin_expr;
                         return expr;
                     }
-                    else {
-                        std::cout << "Bruh! Expected expr";
-                    }
+                    std::cout << "Bruh! Expected expr";
+
                 }
                 else if (peek().value().Type == TokenType::minus) {
                     auto bin_expr_sub = m_allocator.alloc<NodeBinExprSub>();
@@ -124,9 +123,8 @@ public:
                         expr->var = bin_expr;
                         return expr;
                     }
-                    else {
-                        std::cout << "Bruh! Expected expr";
-                    }
+                    std::cout << "Bruh! Expected expr";
+
                 }
                 else if (peek().has_value() && peek().value().Type == TokenType::mult) {
                     auto bin_expr_mult = m_allocator.alloc<NodeBinExprMult>();
@@ -141,9 +139,8 @@ public:
                         expr->var = bin_expr;
                         return expr;
                     }
-                    else {
-                        std::cout << "Bruh! Expected expr";
-                    }
+                    std::cout << "Bruh! Expected expr";
+
                 }
             }
             else {
@@ -177,7 +174,7 @@ public:
             exit(EXIT_FAILURE);
 
         }
-        else if (peek().has_value() && peek().value().Type == TokenType::_int) {
+        if (peek().has_value() && peek().value().Type == TokenType::_int) {
             consume();
             Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
@@ -217,8 +214,7 @@ public:
 
 
 private:
-    // ReSharper disable once CppDFAConstantParameter
-    [[nodiscard]] inline std::optional<Token> peek(int offset = 0) const {
+    [[nodiscard]] std::optional<Token> peek(int offset = 0) const {
         if (m_index + offset >= m_tokens.size()) {
             return {};
         }
@@ -226,18 +222,16 @@ private:
 
     };
 
-    inline Token consume() {
+    Token consume() {
         return m_tokens[m_index++];
     }
 
-    inline Token try_consume(TokenType type, const std::string msg) {
+    Token try_consume(TokenType type, const std::string& msg) {
         if (peek().has_value() && peek().value().Type == type) {
             return consume();
         }
-        else {
-            std::cout << msg << std::endl;
-            exit(EXIT_FAILURE);
-        }
+        std::cout << msg << std::endl;
+        exit(EXIT_FAILURE);
     }
     size_t m_index = 0;
     const std::vector<Token> m_tokens;

@@ -32,11 +32,7 @@
       <change beforePath="$PROJECT_DIR$/Generation.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/Generation.hpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Parser.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/Parser.hpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Tokenization.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/Tokenization.hpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/built/output" beforeDir="false" afterPath="$PROJECT_DIR$/built/output" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/built/output.asm" beforeDir="false" afterPath="$PROJECT_DIR$/built/output.asm" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/built/output.o" beforeDir="false" afterPath="$PROJECT_DIR$/built/output.o" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main" beforeDir="false" afterPath="$PROJECT_DIR$/main" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Проєкт.VT" beforeDir="false" afterPath="$PROJECT_DIR$/Проєкт.VT" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -167,7 +163,7 @@
       <workItem from="1786656809665" duration="2246000" />
       <workItem from="1786788169720" duration="9419000" />
       <workItem from="1786826860898" duration="3964000" />
-      <workItem from="1786906916445" duration="1056000" />
+      <workItem from="1786906916445" duration="1902000" />
     </task>
     <servers />
   </component>

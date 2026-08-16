@@ -5,8 +5,8 @@
 
 class Generator {
 public:
-    inline explicit Generator(NodeProg* prog)
-        :m_prog(std::move(prog))
+    inline explicit Generator(const NodeProg* prog)
+        :m_prog(prog)
     {
 
     }
@@ -122,11 +122,11 @@ public:
 
 
 private:
-    void push(const std::string reg) {
+    void push(const std::string& reg) {
         this->m_output << "\tpush " << reg << "\n";
         m_stack_size++;
     }
-    void pop (const std::string reg) {
+    void pop (const std::string& reg) {
         this->m_output << "\tpop " << reg << "\n";
         m_stack_size--;
     }

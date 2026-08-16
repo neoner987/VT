@@ -4,13 +4,12 @@
 #include <optional>
 
 
-bool isAsciiAlnum(unsigned char c) {
+inline bool isAscii(const unsigned char c) {
     return (c >= 'a' && c <= 'z') ||
-           (c >= 'A' && c <= 'Z') ||
-           (c >= '0' && c <= '9');
+           (c >= 'A' && c <= 'Z');
 }
 
-bool isCyrillicLetter(unsigned char b1, unsigned char b2) {
+inline bool isCyrillicLetter(const unsigned char b1, const unsigned char b2) {
     if (b1 == 0xD0 && (b2 >= 0x80 && b2 <= 0xBF)) return true;
     if (b1 == 0xD1 && (b2 >= 0x80 && b2 <= 0xBF)) return true;
     return false;
@@ -33,37 +32,8 @@ enum class TokenType {
 
 
 struct Token {
-    TokenType Type;
+    TokenType Type = {};
     std::optional<std::string> Value = {};
-
-    void Print() {
-        switch (Type) {
-            case TokenType::exit:
-                std::cout << "вийти ";
-                break;
-            case TokenType::int_lit:
-                std::cout << Value->c_str();
-                break;
-            case TokenType::open_parent:
-                std::cout << "(";
-                break;
-            case TokenType::close_parent:
-                std::cout << ")";
-                break;
-            case TokenType::semi:
-                std::cout << ";\n";
-                break;
-            case TokenType::_int:
-                std::cout << "ціле ";
-                break;
-            case TokenType::eq:
-                std::cout << "= ";
-                break;
-            case TokenType::ident:
-                std::cout << Value->c_str() << " ";
-                break;
-        }
-    }
 
     Token() = default;
 
@@ -95,7 +65,7 @@ public:
                         if ((isCyrillicLetter(peek().value(), peek(1).value())) ){
                             buffer.push_back(consume());
                             buffer.push_back(consume());
-                        } else if (isdigit(peek().value()) || isAsciiAlnum(peek().value())) {
+                        } else if (isdigit(peek().value()) || isAscii(peek().value())) {
                             buffer.push_back(consume());
                         }
                     }
@@ -146,7 +116,7 @@ public:
             } else if (isspace(peek().value())) {
                 consume();
             } else {
-                std::cout << " Bruh! wrong syntacys" << std::endl;
+                std::cout << " Bruh! wrong syntax" << std::endl;
                 break;
             }
         }
