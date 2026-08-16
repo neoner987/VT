@@ -12,8 +12,8 @@
 
 
 
-int main() {
-    std::string filePath = "./Проєкт.VT";
+int main(std::string filePath) {
+
 
     std::string text;
     {
@@ -34,7 +34,7 @@ int main() {
         output_file.close();
     }
     else {
-        std::cout << "Boob";
+        std::cout << "parsing failure";
     }
 
 

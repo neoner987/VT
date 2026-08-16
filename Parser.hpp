@@ -64,7 +64,7 @@ struct NodeProg {
 class Parser {
 
 public:
-    inline explicit Parser(std::vector<Token> tokens)
+     explicit Parser(std::vector<Token> tokens)
         : m_tokens(std::move(tokens)), m_allocator(1024 * 1024 * 4){
 
     }
@@ -77,7 +77,7 @@ public:
             term->var = node_expr_int_lit;
             return term;
         }
-        else if (peek().has_value() && peek().value().Type == TokenType::ident) {
+        if (peek().has_value() && peek().value().Type == TokenType::ident) {
             if (peek().value().Type == TokenType::ident) {
                 auto node_ident = m_allocator.alloc<NodeTermIdent>();
                 node_ident->ident = consume();
@@ -108,9 +108,9 @@ public:
                         return expr;
                     }
                     std::cout << "Bruh! Expected expr";
-
+                    exit(EXIT_FAILURE);
                 }
-                else if (peek().value().Type == TokenType::minus) {
+                if (peek().value().Type == TokenType::minus) {
                     auto bin_expr_sub = m_allocator.alloc<NodeBinExprSub>();
                     auto lhs_expr = m_allocator.alloc<NodeExpr>();
                     lhs_expr->var = term.value();
@@ -124,9 +124,9 @@ public:
                         return expr;
                     }
                     std::cout << "Bruh! Expected expr";
-
+                    exit(EXIT_FAILURE);
                 }
-                else if (peek().has_value() && peek().value().Type == TokenType::mult) {
+                if (peek().has_value() && peek().value().Type == TokenType::mult) {
                     auto bin_expr_mult = m_allocator.alloc<NodeBinExprMult>();
                     auto lhs_expr = m_allocator.alloc<NodeExpr>();
                     lhs_expr->var = term.value();
@@ -140,7 +140,7 @@ public:
                         return expr;
                     }
                     std::cout << "Bruh! Expected expr";
-
+                    exit(EXIT_FAILURE);
                 }
             }
             else {
@@ -149,10 +149,6 @@ public:
                 return expr;
             }
         }
-        else {
-            return {};
-        }
-
         return {};
 
     }
@@ -214,7 +210,7 @@ public:
 
 
 private:
-    [[nodiscard]] std::optional<Token> peek(int offset = 0) const {
+    [[nodiscard]] std::optional<Token> peek(const int offset = 0) const {
         if (m_index + offset >= m_tokens.size()) {
             return {};
         }
@@ -222,11 +218,11 @@ private:
 
     };
 
-    Token consume() {
+    Token consume(){
         return m_tokens[m_index++];
     }
 
-    Token try_consume(TokenType type, const std::string& msg) {
+    Token try_consume(const TokenType type, const std::string& msg) {
         if (peek().has_value() && peek().value().Type == type) {
             return consume();
         }

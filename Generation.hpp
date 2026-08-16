@@ -5,11 +5,8 @@
 
 class Generator {
 public:
-    inline explicit Generator(const NodeProg* prog)
-        :m_prog(prog)
-    {
-
-    }
+    explicit Generator(const NodeProg* prog)
+        :m_prog(prog){}
 
     void gen_term(const NodeTerm* term) {
         struct TermVisitor {

@@ -29,10 +29,8 @@
   <component name="ChangeListManager">
     <list default="true" id="bc7928cb-e2c8-478e-9261-fbb207f5c26c" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Generation.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/Generation.hpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Parser.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/Parser.hpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Tokenization.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/Tokenization.hpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main" beforeDir="false" afterPath="$PROJECT_DIR$/main" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/arena.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/arena.hpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -163,7 +161,7 @@
       <workItem from="1786656809665" duration="2246000" />
       <workItem from="1786788169720" duration="9419000" />
       <workItem from="1786826860898" duration="3964000" />
-      <workItem from="1786906916445" duration="1902000" />
+      <workItem from="1786906916445" duration="2295000" />
     </task>
     <servers />
   </component>
