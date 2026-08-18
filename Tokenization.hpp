@@ -15,7 +15,6 @@ inline bool isCyrillicLetter(const unsigned char b1, const unsigned char b2) {
     return false;
 }
 
-
 enum class TokenType {
     exit,
     int_lit,
@@ -29,6 +28,18 @@ enum class TokenType {
     minus,
     mult
 };
+
+inline std::optional<int> bin_prec(TokenType type) {
+    switch (type) {
+        case TokenType::plus:
+        case TokenType::minus:
+            return 0;
+        case TokenType::mult:
+            return 1;
+        default:
+            return {};
+    }
+}
 
 
 struct Token {
