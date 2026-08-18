@@ -14,13 +14,7 @@ _start:
 	syscall
 	add rsp, 8
 	Label0:
-	mov rax, 69
-	push rax
-	push QWORD [rsp + 8]
-	pop rax
-	pop rbx
-	add rax, rbx
-	push rax
+	push QWORD [rsp + 0]
 	mov rax, 60
 	pop rdi
 	syscall
