@@ -15,6 +15,13 @@ struct NodeTermIdent {
 
 struct NodeExpr;
 
+struct NodeTermParent {
+    NodeExpr* expr;
+};
+
+struct NodeTerm {
+    std::variant<NodeTermIntLit*, NodeTermIdent*, NodeTermParent*> var ;
+};
 
 struct NodeBinExprAdd {
     NodeExpr* lhs;
@@ -32,12 +39,13 @@ struct NodeBinExprMult {
 
 };
 
-struct NodeBinExpr {
-    std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMult*> var;
-};
+struct NodeBinExprDiv {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
 
-struct NodeTerm {
-    std::variant<NodeTermIntLit*, NodeTermIdent*> var ;
+};
+struct NodeBinExpr {
+    std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMult*, NodeBinExprDiv*> var;
 };
 
 struct NodeExpr {
@@ -52,8 +60,19 @@ struct NodeStmtInt {
     NodeExpr* expr;
 };
 
+struct NodeStmt;
+
+struct NodeScope {
+    std::vector<NodeStmt*> stmts;
+};
+
+struct NodeStmtIf {
+    NodeExpr* expr;
+    NodeScope* scope;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtInt*> var;
+    std::variant<NodeStmtExit*, NodeStmtInt*, NodeScope*, NodeStmtIf*> var;
 };
 
 struct NodeProg {
@@ -86,6 +105,20 @@ public:
                 return term;
             }
         }
+         if (peek().has_value() && peek().value().Type == TokenType::open_parent) {
+             consume();
+             auto expr = parse_expr();
+             if (!expr.has_value()) {
+                 std::cout << "Bruh! Invalid expr T_T ";
+                 exit(EXIT_FAILURE);
+             }
+             try_consume(TokenType::close_parent, "Bruh! Parent doesnt close!");
+             auto term = m_allocator.alloc<NodeTerm>();
+             auto parent_term = m_allocator.alloc<NodeTermParent>();
+             parent_term->expr = expr.value();
+             term->var = parent_term;
+             return term;
+         }
         return {};
     }
 
@@ -133,12 +166,18 @@ public:
                  sub->lhs = expr_lhs2;
                  sub->rhs = expr_rhs.value();
                  expr->var = sub;
-             }else if (op.Type == TokenType::mult) {
+             }else if (op.Type == TokenType::star) {
                  auto mult = m_allocator.alloc<NodeBinExprMult>();
                  expr_lhs2->var = expr_lhs->var;
                  mult->lhs = expr_lhs2;
                  mult->rhs = expr_rhs.value();
                  expr->var = mult;
+             }else if (op.Type == TokenType::fslash) {
+                 auto div = m_allocator.alloc<NodeBinExprDiv>();
+                 expr_lhs2->var = expr_lhs->var;
+                 div->lhs = expr_lhs2;
+                 div->rhs = expr_rhs.value();
+                 expr->var = div;
              }
 
              expr_lhs->var = expr;
@@ -146,6 +185,19 @@ public:
          }
          return expr_lhs;
     }
+
+    std::optional<NodeScope*> parse_scope() {
+         if (peek().has_value() && peek().value().Type == TokenType::open_curly) {
+             consume();
+             auto stmt_scope = m_allocator.alloc<NodeScope>();
+             while (auto node_stmt = parse_stmt()) {
+                 stmt_scope->stmts.push_back(node_stmt.value());
+             }
+             try_consume(TokenType::close_curly, "Bruh! No close curly.");
+             return stmt_scope;
+         }
+         return {};
+     }
 
     std::optional<NodeStmt*> parse_stmt() {
         if (peek().has_value() && peek().value().Type == TokenType::exit) {
@@ -180,8 +232,32 @@ public:
             std::cout << "Bruh! No value after = T_T ";
             exit(EXIT_FAILURE);
         }
-        std::cout << "Bruh! Invalid stmt";
-        exit(EXIT_FAILURE);
+         if (peek().has_value() && peek().value().Type == TokenType::_if) {
+             consume();
+             try_consume(TokenType::open_parent, "Bruh! No open parenthesis.");
+             auto stmt_if = m_allocator.alloc<NodeStmtIf>();
+             if (auto node_expr = parse_expr()) {
+                 stmt_if->expr = node_expr.value();
+                 try_consume(TokenType::close_parent, "Bruh! No close parenthesis");
+                 if (auto scope = parse_scope()) {
+                     stmt_if->scope = scope.value();
+                 }
+                 auto stmt = m_allocator.alloc<NodeStmt>();
+                 stmt->var = stmt_if;
+                 return stmt;
+             }
+             else {
+                 std::cout << "Bruh! Invalid expr after if.";
+                 exit(EXIT_FAILURE);
+             }
+         }
+         if (auto scope = parse_scope()) {
+             auto stmt = m_allocator.alloc<NodeStmt>();
+             stmt->var = scope.value();
+             return stmt;
+         }
+
+        return {};
 
     }
 

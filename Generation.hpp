@@ -1,5 +1,6 @@
 #pragma once
-#include <unordered_map>
+#include <algorithm>
+#include <map>
 #include "Parser.hpp"
 
 
@@ -16,12 +17,15 @@ public:
                 gen->push("rax");
             }
             void operator()(const NodeTermIdent* term_ident) const {
-                if (gen->m_vars.find(term_ident->ident.Value.value()) == gen->m_vars.end()) {
+                auto it = std::find_if(gen->m_vars.cbegin(),  gen->m_vars.cend(), [&](const Var& var){return var.ident  == term_ident->ident.Value.value();});
+                if ( it == gen->m_vars.cend()) {
                     std::cout << "Ident not declared: " << term_ident->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                const Var var = gen->m_vars.at(term_ident->ident.Value.value());
-                gen->push("QWORD [rsp + " + std::to_string((gen->m_stack_size - var.stack_loc - 1)*8) + "]\n");
+                gen->push("QWORD [rsp + " + std::to_string((gen->m_stack_size - (*it).stack_loc - 1)*8) + "]");
+            }
+            void operator()(const NodeTermParent* term_prant) const {
+                gen->gen_expr(term_prant->expr);
             }
         };
 
@@ -54,7 +58,15 @@ public:
                 gen->gen_expr(mult_expr->lhs);
                 gen->pop("rax");
                 gen->pop("rbx");
-                gen->m_output << "\timul rax, rbx" << "\n";
+                gen->m_output << "\tmul rbx" << "\n";
+                gen->push("rax");
+            }
+            void operator()(const NodeBinExprDiv* div_expr) const {
+                gen->gen_expr(div_expr->rhs);
+                gen->gen_expr(div_expr->lhs);
+                gen->pop("rax");
+                gen->pop("rbx");
+                gen->m_output << "\tdiv rbx" << "\n";
                 gen->push("rax");
             }
         };
@@ -78,7 +90,13 @@ public:
         std::visit(visitor, expr->var);
     }
 
-
+    void gen_scope(NodeScope* scope) {
+        begin_scope();
+        for (const NodeStmt* stmt : scope->stmts) {
+            gen_stmt(stmt);
+        }
+        end_scope();
+    }
 
     void gen_stmt(const NodeStmt* stmt) {
         struct StmtVisitor {
@@ -90,13 +108,25 @@ public:
                 gen->m_output << "\tsyscall\n";
             }
             void operator()(const NodeStmtInt* stmt_int) const {
-                if (gen->m_vars.find(stmt_int->ident.Value.value()) != gen->m_vars.end()) {
+                auto it = std::find_if(gen->m_vars.cbegin(),  gen->m_vars.cend(), [&](const Var& var){return var.ident  == stmt_int->ident.Value.value();});
+                if (it != gen->m_vars.cend()) {
                     std::cout << "Ident already used: " << stmt_int->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                gen->m_vars.insert({stmt_int->ident.Value.value(), Var{.stack_loc = gen->m_stack_size}});
+                gen->m_vars.push_back(Var{.ident = stmt_int->ident.Value.value(), .stack_loc = gen->m_stack_size });
                 gen->gen_expr(stmt_int->expr);
-
+            }
+            void operator()(NodeScope* scope) const {
+                gen->gen_scope(scope);
+            }
+            void operator()(const NodeStmtIf* stmt_if) const {
+                gen->gen_expr(stmt_if->expr);
+                gen->pop("rax");
+                std::string label = gen->create_label();
+                gen->m_output << "\ttest rax, rax" << "\n";
+                gen->m_output << "\tjz " + label + "\n";
+                gen->gen_scope(stmt_if->scope);
+                gen->m_output << "\t" <<label << ":\n";
             }
         };
 
@@ -119,6 +149,19 @@ public:
 
 
 private:
+
+    void begin_scope() {
+        m_scopes.push_back(m_vars.size());
+    }
+    void end_scope() {
+        size_t pop_count = m_vars.size() - m_scopes.back();
+        m_output << "\tadd rsp, " << pop_count * 8 << "\n";
+        m_stack_size -= pop_count;
+        for (int a = 0; a < pop_count; a++) {
+            m_vars.pop_back();
+        }
+        m_scopes.pop_back();
+    }
     void push(const std::string& reg) {
         this->m_output << "\tpush " << reg << "\n";
         m_stack_size++;
@@ -127,14 +170,20 @@ private:
         this->m_output << "\tpop " << reg << "\n";
         m_stack_size--;
     }
+    std::string create_label() {
+        return "Label" + std::to_string(label_count++);
+    }
 
     struct Var {
+        std::string ident;
         size_t stack_loc;
 
     };
 
+    int label_count = 0;
     std::stringstream m_output;
     const NodeProg* m_prog;
     size_t m_stack_size = 0;
-    std::unordered_map<std::string, Var> m_vars {};
+    std::vector<Var> m_vars {};
+    std::vector< size_t > m_scopes {};
 };

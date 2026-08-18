@@ -26,7 +26,12 @@ enum class TokenType {
     eq,
     plus,
     minus,
-    mult
+    star,
+    fslash,
+    open_curly,
+    close_curly,
+    _if
+
 };
 
 inline std::optional<int> bin_prec(TokenType type) {
@@ -34,7 +39,8 @@ inline std::optional<int> bin_prec(TokenType type) {
         case TokenType::plus:
         case TokenType::minus:
             return 0;
-        case TokenType::mult:
+        case TokenType::star:
+        case TokenType::fslash:
             return 1;
         default:
             return {};
@@ -88,6 +94,10 @@ public:
                         tokens.push_back(Token(TokenType::_int));
                         buffer.clear();
                     }
+                    else if (buffer == "якщо") {
+                        tokens.push_back(Token(TokenType::_if));
+                        buffer.clear();
+                    }
                     else {
                         tokens.push_back(Token(TokenType::ident, buffer));
                         buffer.clear();
@@ -120,10 +130,19 @@ public:
                 tokens.push_back(Token(TokenType::plus));
             }else if (peek().value() ==  '*') {
                 consume();
-                tokens.push_back(Token(TokenType::mult));
+                tokens.push_back(Token(TokenType::star));
             }else if (peek().value() ==  '-') {
                 consume();
                 tokens.push_back(Token(TokenType::minus));
+            }else if (peek().value() ==  '/') {
+                consume();
+                tokens.push_back(Token(TokenType::fslash));
+            }else if (peek().value() ==  '{') {
+                consume();
+                tokens.push_back(Token(TokenType::open_curly));
+            }else if (peek().value() ==  '}') {
+                consume();
+                tokens.push_back(Token(TokenType::close_curly));
             } else if (isspace(peek().value())) {
                 consume();
             } else {
