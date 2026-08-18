@@ -11,82 +11,82 @@ public:
 
     void gen_term(const NodeTerm* term) {
         struct TermVisitor {
-          Generator* gen;
+          Generator& gen;
             void operator()(const NodeTermIntLit* term_int_lit) const {
-                gen->m_output << "\tmov rax, " << term_int_lit->int_lit.Value.value() << "\n";
-                gen->push("rax");
+                gen.m_output << "\tmov rax, " << term_int_lit->int_lit.Value.value() << "\n";
+                gen.push("rax");
             }
             void operator()(const NodeTermIdent* term_ident) const {
-                auto it = std::find_if(gen->m_vars.cbegin(),  gen->m_vars.cend(), [&](const Var& var){return var.ident  == term_ident->ident.Value.value();});
-                if ( it == gen->m_vars.cend()) {
+                auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(), [&](const Var& var){return var.ident  == term_ident->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
                     std::cout << "Ident not declared: " << term_ident->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                gen->push("QWORD [rsp + " + std::to_string((gen->m_stack_size - (*it).stack_loc - 1)*8) + "]");
+                gen.push("QWORD [rsp + " + std::to_string((gen.m_stack_size - (*it).stack_loc - 1)*8) + "]");
             }
             void operator()(const NodeTermParent* term_prant) const {
-                gen->gen_expr(term_prant->expr);
+                gen.gen_expr(term_prant->expr);
             }
         };
 
-        TermVisitor visitor {.gen = this};
+        TermVisitor visitor {.gen = *this};
         std::visit(visitor, term->var);
 
     }
 
     void gen_bin_expr(const NodeBinExpr* bin_expr) {
         struct BinExprVisitor {
-            Generator* gen;
+            Generator& gen;
             void operator()(const NodeBinExprAdd* add_expr) const {
-                gen->gen_expr(add_expr->rhs);
-                gen->gen_expr(add_expr->lhs);
-                gen->pop("rax");
-                gen->pop("rbx");
-                gen->m_output << "\tadd rax, rbx" << "\n";
-                gen->push("rax");
+                gen.gen_expr(add_expr->rhs);
+                gen.gen_expr(add_expr->lhs);
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tadd rax, rbx" << "\n";
+                gen.push("rax");
             }
             void operator()(const NodeBinExprSub* sub_expr) const {
-                gen->gen_expr(sub_expr->rhs);
-                gen->gen_expr(sub_expr->lhs);
-                gen->pop("rax");
-                gen->pop("rbx");
-                gen->m_output << "\tsub rax, rbx" << "\n";
-                gen->push("rax");
+                gen.gen_expr(sub_expr->rhs);
+                gen.gen_expr(sub_expr->lhs);
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tsub rax, rbx" << "\n";
+                gen.push("rax");
             }
             void operator()(const NodeBinExprMult* mult_expr) const {
-                gen->gen_expr(mult_expr->rhs);
-                gen->gen_expr(mult_expr->lhs);
-                gen->pop("rax");
-                gen->pop("rbx");
-                gen->m_output << "\tmul rbx" << "\n";
-                gen->push("rax");
+                gen.gen_expr(mult_expr->rhs);
+                gen.gen_expr(mult_expr->lhs);
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tmul rbx" << "\n";
+                gen.push("rax");
             }
             void operator()(const NodeBinExprDiv* div_expr) const {
-                gen->gen_expr(div_expr->rhs);
-                gen->gen_expr(div_expr->lhs);
-                gen->pop("rax");
-                gen->pop("rbx");
-                gen->m_output << "\tdiv rbx" << "\n";
-                gen->push("rax");
+                gen.gen_expr(div_expr->rhs);
+                gen.gen_expr(div_expr->lhs);
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tdiv rbx" << "\n";
+                gen.push("rax");
             }
         };
 
-        BinExprVisitor visitor {.gen = this};
+        BinExprVisitor visitor {.gen = *this};
         std::visit(visitor, bin_expr->var);
     }
 
     void gen_expr(const NodeExpr* expr) {
         struct ExprVisitor {
-            Generator* gen;
+            Generator& gen;
             void operator()(const NodeTerm* expt_term) const {
-                gen->gen_term(expt_term);
+                gen.gen_term(expt_term);
             }
             void operator()(const NodeBinExpr* bin_expt) const{
-                gen->gen_bin_expr(bin_expt);
+                gen.gen_bin_expr(bin_expt);
             }
         };
 
-        ExprVisitor visitor {.gen = this};
+        ExprVisitor visitor {.gen = *this};
         std::visit(visitor, expr->var);
     }
 
@@ -100,37 +100,37 @@ public:
 
     void gen_stmt(const NodeStmt* stmt) {
         struct StmtVisitor {
-            Generator* gen;
+            Generator& gen;
             void operator()(const NodeStmtExit* stmt_exit) const {
-                gen->gen_expr(stmt_exit->expr);
-                gen->m_output << "\tmov rax, 60\n";
-                gen->pop("rdi");
-                gen->m_output << "\tsyscall\n";
+                gen.gen_expr(stmt_exit->expr);
+                gen.m_output << "\tmov rax, 60\n";
+                gen.pop("rdi");
+                gen.m_output << "\tsyscall\n";
             }
             void operator()(const NodeStmtInt* stmt_int) const {
-                auto it = std::find_if(gen->m_vars.cbegin(),  gen->m_vars.cend(), [&](const Var& var){return var.ident  == stmt_int->ident.Value.value();});
-                if (it != gen->m_vars.cend()) {
+                auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(), [&](const Var& var){return var.ident  == stmt_int->ident.Value.value();});
+                if (it != gen.m_vars.cend()) {
                     std::cout << "Ident already used: " << stmt_int->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                gen->m_vars.push_back(Var{.ident = stmt_int->ident.Value.value(), .stack_loc = gen->m_stack_size });
-                gen->gen_expr(stmt_int->expr);
+                gen.m_vars.push_back(Var{.ident = stmt_int->ident.Value.value(), .stack_loc = gen.m_stack_size });
+                gen.gen_expr(stmt_int->expr);
             }
             void operator()(NodeScope* scope) const {
-                gen->gen_scope(scope);
+                gen.gen_scope(scope);
             }
             void operator()(const NodeStmtIf* stmt_if) const {
-                gen->gen_expr(stmt_if->expr);
-                gen->pop("rax");
-                std::string label = gen->create_label();
-                gen->m_output << "\ttest rax, rax" << "\n";
-                gen->m_output << "\tjz " + label + "\n";
-                gen->gen_scope(stmt_if->scope);
-                gen->m_output << "\t" <<label << ":\n";
+                gen.gen_expr(stmt_if->expr);
+                gen.pop("rax");
+                std::string label = gen.create_label();
+                gen.m_output << "\ttest rax, rax" << "\n";
+                gen.m_output << "\tjz " + label + "\n";
+                gen.gen_scope(stmt_if->scope);
+                gen.m_output << "\t" <<label << ":\n";
             }
         };
 
-        StmtVisitor visitor{.gen = this};
+        StmtVisitor visitor{.gen = *this};
         std::visit(visitor, stmt->var);
     }
 
