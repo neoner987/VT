@@ -24,10 +24,10 @@ int main(int argc, char* argv[]) {
         text = strStream.str();
     }
 
-    Tokenizer tokenizer(std::move(text));
+    Tokenizer tokenizer(text);
     std::vector<Token> Tokens = tokenizer.Tokenize();
     Parser parser(Tokens);
-    if (auto prog = parser.parse_prog()) {
+    if (const auto prog = parser.parse_prog()) {
         Generator generator(prog.value());
         std::ofstream output_file("./built/output.asm");
         output_file << generator.gen_prog().str();
@@ -39,5 +39,6 @@ int main(int argc, char* argv[]) {
 
 
     std::system("nasm -felf64 ./built/output.asm -o ./built/output.o && ld ./built/output.o -o ./built/output");
+    std::system("./built/output; echo $?");
     return 0;
 }

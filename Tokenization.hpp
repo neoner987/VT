@@ -54,11 +54,11 @@ struct Token {
 
     Token() = default;
 
-    explicit Token(TokenType type, std::string value)
-        : Type(type), Value(std::move(value)) {
+    explicit Token(const TokenType type, const std::string &value)
+        : Type(type), Value(value) {
     }
 
-    explicit Token(TokenType type)
+    explicit Token(const TokenType type)
         : Type(type) {
     }
 };
@@ -66,11 +66,11 @@ struct Token {
 
 class Tokenizer {
 public:
-    inline explicit Tokenizer(std::string src)
+    explicit Tokenizer(std::string src)
         : m_src(std::move(src)) {
     }
 
-    inline std::vector<Token> Tokenize() {
+    std::vector<Token> Tokenize() {
         std::vector<Token> tokens;
         std::string buffer{};
         while (peek().has_value()) {
@@ -130,12 +130,34 @@ public:
                 tokens.push_back(Token(TokenType::plus));
             }else if (peek().value() ==  '*') {
                 consume();
+                if (peek().has_value() && peek().value() == '*' && peek(1).has_value() && peek(1).value() == '*') {
+                    consume();
+                    consume();
+                    while (peek().has_value() && peek().value() != '\n')
+                        {
+                        consume();
+                    }
+                    continue;
+                }
                 tokens.push_back(Token(TokenType::star));
             }else if (peek().value() ==  '-') {
                 consume();
                 tokens.push_back(Token(TokenType::minus));
             }else if (peek().value() ==  '/') {
                 consume();
+                if ( peek().has_value() && peek().value() == '*') {
+                    consume();
+                    while (peek().has_value() && peek().value() != '*') {
+                        consume();
+                    }
+                    if (!peek().has_value()) {
+                        std::cout << " Bruh! Comment never ended! " << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                    consume();
+                    consume();
+                    continue;
+                }
                 tokens.push_back(Token(TokenType::fslash));
             }else if (peek().value() ==  '{') {
                 consume();
@@ -155,15 +177,14 @@ public:
     }
 
 private:
-    [[nodiscard]] inline std::optional<char> peek(int offset = 0) const {
+    [[nodiscard]] std::optional<char> peek(const int offset = 0) const {
         if (m_index + offset >= m_src.length()) {
             return {};
-        } else {
-            return m_src.at(m_index + offset);
         }
+        return m_src.at(m_index + offset);
     };
 
-    inline char consume() {
+    char consume() {
         return m_src.at(m_index++);
     }
 

@@ -17,15 +17,15 @@ public:
                 gen.push("rax");
             }
             void operator()(const NodeTermIdent* term_ident) const {
-                auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(), [&](const Var& var){return var.ident  == term_ident->ident.Value.value();});
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(), [&](const Var& var){return var.ident  == term_ident->ident.Value.value();});
                 if ( it == gen.m_vars.cend()) {
                     std::cout << "Ident not declared: " << term_ident->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                gen.push("QWORD [rsp + " + std::to_string((gen.m_stack_size - (*it).stack_loc - 1)*8) + "]");
+                gen.push("QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "]");
             }
-            void operator()(const NodeTermParent* term_prant) const {
-                gen.gen_expr(term_prant->expr);
+            void operator()(const NodeTermParent* term_parent) const {
+                gen.gen_expr(term_parent->expr);
             }
         };
 
@@ -90,7 +90,7 @@ public:
         std::visit(visitor, expr->var);
     }
 
-    void gen_scope(NodeScope* scope) {
+    void gen_scope(const NodeScope* scope) {
         begin_scope();
         for (const NodeStmt* stmt : scope->stmts) {
             gen_stmt(stmt);
@@ -108,21 +108,23 @@ public:
                 gen.m_output << "\tsyscall\n";
             }
             void operator()(const NodeStmtInt* stmt_int) const {
-                auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(), [&](const Var& var){return var.ident  == stmt_int->ident.Value.value();});
-                if (it != gen.m_vars.cend()) {
+                if (std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var)
+                    {return var.ident  == stmt_int->ident.Value.value();})
+                    != gen.m_vars.cend()) {
                     std::cout << "Ident already used: " << stmt_int->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
                 gen.m_vars.push_back(Var{.ident = stmt_int->ident.Value.value(), .stack_loc = gen.m_stack_size });
                 gen.gen_expr(stmt_int->expr);
             }
-            void operator()(NodeScope* scope) const {
+            void operator()(const NodeScope* scope) const {
                 gen.gen_scope(scope);
             }
             void operator()(const NodeStmtIf* stmt_if) const {
                 gen.gen_expr(stmt_if->expr);
                 gen.pop("rax");
-                std::string label = gen.create_label();
+                const std::string label = gen.create_label();
                 gen.m_output << "\ttest rax, rax" << "\n";
                 gen.m_output << "\tjz " + label + "\n";
                 gen.gen_scope(stmt_if->scope);
@@ -154,7 +156,7 @@ private:
         m_scopes.push_back(m_vars.size());
     }
     void end_scope() {
-        size_t pop_count = m_vars.size() - m_scopes.back();
+        const size_t pop_count = m_vars.size() - m_scopes.back();
         m_output << "\tadd rsp, " << pop_count * 8 << "\n";
         m_stack_size -= pop_count;
         for (int a = 0; a < pop_count; a++) {
