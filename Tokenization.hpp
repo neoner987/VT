@@ -30,8 +30,8 @@ enum class TokenType {
     fslash,
     open_curly,
     close_curly,
-    _if
-
+    _if,
+    _else
 };
 
 inline std::optional<int> bin_prec(TokenType type) {
@@ -96,6 +96,10 @@ public:
                     }
                     else if (buffer == "якщо") {
                         tokens.push_back(Token(TokenType::_if));
+                        buffer.clear();
+                    }
+                    else if (buffer == "інак") {
+                        tokens.push_back(Token(TokenType::_else));
                         buffer.clear();
                     }
                     else {

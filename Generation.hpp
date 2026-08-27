@@ -98,6 +98,38 @@ public:
         end_scope();
     }
 
+    void gen_if_pred(const NodeIfPred* if_pred, const std::string& endStmt) {
+
+        struct IfPredVisitor {
+            Generator& gen;
+            const std::string& endStmt;
+            void operator()(const NodeElseIf* nodeElseIf) const {
+                gen.gen_expr(nodeElseIf->expr);
+                gen.pop("rax");
+                const std::string endIf = gen.create_label();
+
+                gen.m_output << "\ttest rax, rax" << "\n";
+                gen.m_output << "\tjnz " + endIf + "\n";
+                gen.gen_scope(nodeElseIf->scope);
+                if (nodeElseIf->if_pred.has_value()) {
+                    gen.m_output << "\tjmp " << endStmt << "\n";
+                    gen.m_output << "\t" << endIf << ":\n";
+                    gen.gen_if_pred(nodeElseIf->if_pred.value(), endStmt);
+                }
+                else {
+                    gen.m_output << "\t" << endIf << ":\n";
+                }
+            }
+
+            void operator() (const NodeElse* nodeElse) const {
+                gen.gen_scope(nodeElse->scope);
+            }
+        };
+
+        IfPredVisitor visitor{.gen = *this, .endStmt = endStmt};
+        std::visit(visitor, if_pred->var);
+    }
+
     void gen_stmt(const NodeStmt* stmt) {
         struct StmtVisitor {
             Generator& gen;
@@ -124,11 +156,34 @@ public:
             void operator()(const NodeStmtIf* stmt_if) const {
                 gen.gen_expr(stmt_if->expr);
                 gen.pop("rax");
-                const std::string label = gen.create_label();
+                const std::string endIf = gen.create_label();
+
                 gen.m_output << "\ttest rax, rax" << "\n";
-                gen.m_output << "\tjz " + label + "\n";
+                gen.m_output << "\tjnz " + endIf + "\n";
                 gen.gen_scope(stmt_if->scope);
-                gen.m_output << "\t" <<label << ":\n";
+
+                if (stmt_if->if_pred.has_value()) {
+                    const std::string endStmt = gen.create_label();
+                    gen.m_output << "\tjmp " << endStmt << "\n";
+                    gen.m_output << "\t" << endIf << ":\n";
+                    gen.gen_if_pred(stmt_if->if_pred.value(), endStmt);
+                    gen.m_output << "\t"<< endStmt << ":\n";
+                }
+                else {
+                    gen.m_output << "\t" << endIf << ":\n";
+                }
+            }
+            void operator() (const NodeStmtVarReassignment* stmt_var_reassignment) const {
+                gen.gen_expr(stmt_var_reassignment->expr);
+                gen.pop("rax");
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var){return var.ident
+                        == stmt_var_reassignment->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
+                    std::cout << "Ident not declared: " << stmt_var_reassignment->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                gen.m_output << "mov QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax\n";
             }
         };
 

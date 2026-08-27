@@ -66,13 +66,35 @@ struct NodeScope {
     std::vector<NodeStmt*> stmts;
 };
 
-struct NodeStmtIf {
+struct NodeIfPred;
+
+struct NodeElseIf {
     NodeExpr* expr;
+    NodeScope* scope;
+    std::optional<NodeIfPred*> if_pred;
+};
+
+struct NodeElse {
     NodeScope* scope;
 };
 
+struct NodeIfPred {
+    std::variant<NodeElseIf*, NodeElse*> var;
+};
+
+struct NodeStmtIf {
+    NodeExpr* expr;
+    NodeScope* scope;
+    std::optional<NodeIfPred*> if_pred;
+};
+
+struct NodeStmtVarReassignment {
+    Token ident;
+    NodeExpr* expr;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtInt*, NodeScope*, NodeStmtIf*> var;
+    std::variant<NodeStmtExit*, NodeStmtInt*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*> var;
 };
 
 struct NodeProg {
@@ -199,6 +221,45 @@ public:
          return {};
      }
 
+    std::optional<NodeIfPred*> parse_if_pred() {
+         if (peek().has_value() && peek().value().Type == TokenType::_else) {
+             consume();
+             if (peek().has_value() && peek().value().Type == TokenType::_if) {
+                 consume();
+                 try_consume(TokenType::open_parent, "No '(' after if");
+                 const auto if_pred = m_allocator.alloc<NodeIfPred>();
+                 const auto elseif = m_allocator.alloc<NodeElseIf>();
+                 if (const auto expr = parse_expr()) {
+                     elseif->expr = expr.value();
+                     try_consume(TokenType::close_parent, "No ')' after if");
+                     if (const auto scope = parse_scope()) {
+                         elseif->scope = scope.value();
+                         if (const auto next_if_pred = parse_if_pred()) {
+                             elseif->if_pred = next_if_pred.value();
+                         }
+                         if_pred->var = elseif;
+                         return if_pred;
+                     }
+                     std::cout << " Scope dont parsed" << std::endl;
+                     exit(EXIT_FAILURE);
+                 }
+                 std::cout << " Scope dont parsed" << std::endl;
+                 exit(EXIT_FAILURE);
+             }
+             if (const auto scope = parse_scope()) {
+                 const auto node_else = m_allocator.alloc<NodeElse>();
+                 node_else->scope = scope.value();
+                 const auto node_pred = m_allocator.alloc<NodeIfPred>();
+                 node_pred->var = node_else;
+                 return node_pred;
+             }
+             std::cout << " Scope dont parsed" << std::endl;
+             exit(EXIT_FAILURE);
+         }
+
+         return {};
+     }
+
     std::optional<NodeStmt*> parse_stmt() {
         if (peek().has_value() && peek().value().Type == TokenType::exit) {
             consume();
@@ -242,19 +303,34 @@ public:
                  if (const auto scope = parse_scope()) {
                      stmt_if->scope = scope.value();
                  }
+                 if (const auto if_pred = parse_if_pred()) {
+                     stmt_if->if_pred = if_pred.value();
+                 }
                  const auto stmt = m_allocator.alloc<NodeStmt>();
                  stmt->var = stmt_if;
                  return stmt;
              }
-             else {
-                 std::cout << "Bruh! Invalid expr after if.";
-                 exit(EXIT_FAILURE);
-             }
+             std::cout << "Bruh! Invalid expr after if.";
+             exit(EXIT_FAILURE);
          }
          if (const auto scope = parse_scope()) {
              const auto stmt = m_allocator.alloc<NodeStmt>();
              stmt->var = scope.value();
              return stmt;
+         }
+         if (peek().has_value() && peek().value().Type == TokenType::ident) {
+             const auto stmt = m_allocator.alloc<NodeStmt>();
+             const auto node_var_reassign = m_allocator.alloc<NodeStmtVarReassignment>();
+             node_var_reassign->ident = consume();
+             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
+             if (const auto node_expr = parse_expr()) {
+                 try_consume(TokenType::semi, "Bruh! No semi.");
+                 node_var_reassign->expr = node_expr.value();
+                 stmt->var = node_var_reassign;
+                 return stmt;
+             }
+             std::cout << "Bruh! Invalid expr in reassignment.";
+             exit(EXIT_FAILURE);
          }
 
         return {};
@@ -286,7 +362,7 @@ private:
         }
         return m_tokens[m_index + offset];
 
-    };
+    }
 
     Token consume(){
         return m_tokens[m_index++];
