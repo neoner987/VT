@@ -15,14 +15,40 @@ scope statement:
 }
 
 variables:  
-ціле боб = 67;
+ціле боб = 67;  
+боб += 2;  
+ціле біба = боб * 2;  
+біба++;  
+булеве біб = правда;  
 
 if statement:  
-якщо ( боб )
-{
-    any statements
+якщо ( правда )
+{  
+    any statements  
 }  
 
+else if predicate:
+якщо ( хиба )  
+{    
+    any statements  
+}    
+інак якщо (біб)  
+{  
+    any statements  
+}  
+інак   
+{  
+    any statements  
+}
+
+loop statement:
+повторити(10)  
+{  
+    any statements  
+}  
+  
+
+  
 comments:  
 *** comment...  
 
