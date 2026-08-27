@@ -13,51 +13,68 @@ struct NodeTermIdent {
     Token ident;
 };
 
-struct NodeExpr;
+struct NodeIntExpr;
 
 struct NodeTermParent {
-    NodeExpr* expr;
+    NodeIntExpr* expr;
 };
 
 struct NodeTerm {
     std::variant<NodeTermIntLit*, NodeTermIdent*, NodeTermParent*> var ;
 };
 
+struct NodeBoolTermLit {
+    Token bool_lit;
+};
+
+struct NodeBoolTerm {
+  std::variant<NodeBoolTermLit*, NodeTermIdent*> var;
+};
+
+struct NodeBoolExpr {
+    NodeBoolTerm* var;
+};
+
 struct NodeBinExprAdd {
-    NodeExpr* lhs;
-    NodeExpr* rhs;
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
 };
 
 struct NodeBinExprSub {
-    NodeExpr* lhs;
-    NodeExpr* rhs;
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
 };
 
 struct NodeBinExprMult {
-    NodeExpr* lhs;
-    NodeExpr* rhs;
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
 
 };
 
 struct NodeBinExprDiv {
-    NodeExpr* lhs;
-    NodeExpr* rhs;
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
 
 };
 struct NodeBinExpr {
     std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMult*, NodeBinExprDiv*> var;
 };
 
-struct NodeExpr {
+struct NodeIntExpr {
     std::variant<NodeTerm*, NodeBinExpr*> var;
 };
 
 struct NodeStmtExit {
-    NodeExpr* expr;
+    NodeIntExpr* expr;
 };
 struct NodeStmtInt {
     Token ident;
-    NodeExpr* expr;
+    NodeIntExpr* expr;
+};
+
+struct NodeStmtBool {
+    Token ident;
+    NodeBoolExpr* expr;
 };
 
 struct NodeStmt;
@@ -69,7 +86,7 @@ struct NodeScope {
 struct NodeIfPred;
 
 struct NodeElseIf {
-    NodeExpr* expr;
+    NodeBoolExpr* expr;
     NodeScope* scope;
     std::optional<NodeIfPred*> if_pred;
 };
@@ -83,14 +100,14 @@ struct NodeIfPred {
 };
 
 struct NodeStmtIf {
-    NodeExpr* expr;
+    NodeBoolExpr* expr;
     NodeScope* scope;
     std::optional<NodeIfPred*> if_pred;
 };
 
 struct NodeStmtVarReassignment {
     Token ident;
-    NodeExpr* expr;
+    std::variant<NodeIntExpr*, NodeBoolExpr*> expr;
 };
 
 
@@ -103,19 +120,19 @@ struct NodeVarDec {
 
 struct NodeInstAdd {
     Token ident;
-    NodeExpr* expr;
+    NodeIntExpr* expr;
 };
 struct NodeInstSub {
     Token ident;
-    NodeExpr* expr;
+    NodeIntExpr* expr;
 };
 struct NodeInstMul {
     Token ident;
-    NodeExpr* expr;
+    NodeIntExpr* expr;
 };
 struct NodeInstDiv {
     Token ident;
-    NodeExpr* expr;
+    NodeIntExpr* expr;
 };
 
 struct NodeStmtInstOp {
@@ -123,12 +140,12 @@ struct NodeStmtInstOp {
 };
 
 struct NodeStmtRepeat {
-    NodeExpr* expr;
+    NodeIntExpr* expr;
     NodeScope* scope;
 };
 
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtInt*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*, NodeVarInc*, NodeVarDec*, NodeStmtInstOp*, NodeStmtRepeat*> var;
+    std::variant<NodeStmtExit*, NodeStmtInt*, NodeStmtBool*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*, NodeVarInc*, NodeVarDec*, NodeStmtInstOp*, NodeStmtRepeat*> var;
 };
 
 struct NodeProg {
@@ -144,7 +161,7 @@ public:
 
     }
 
-    std::optional<NodeTerm*> parse_term() {
+    std::optional<NodeTerm*> parse_int_term() {
         if (peek().has_value() && peek().value().Type == TokenType::int_lit) {
             const auto node_expr_int_lit = m_allocator.alloc<NodeTermIntLit>();
             node_expr_int_lit->int_lit = consume();
@@ -153,17 +170,15 @@ public:
             return term;
         }
         if (peek().has_value() && peek().value().Type == TokenType::ident) {
-            if (peek().value().Type == TokenType::ident) {
-                const auto node_ident = m_allocator.alloc<NodeTermIdent>();
-                node_ident->ident = consume();
-                const auto term = m_allocator.alloc<NodeTerm>();
-                term->var = node_ident;
-                return term;
-            }
+            const auto node_ident = m_allocator.alloc<NodeTermIdent>();
+            node_ident->ident = consume();
+            const auto term = m_allocator.alloc<NodeTerm>();
+            term->var = node_ident;
+            return term;
         }
          if (peek().has_value() && peek().value().Type == TokenType::open_parent) {
              consume();
-             const auto expr = parse_expr();
+             const auto expr = parse_int_expr();
              if (!expr.has_value()) {
                  std::cout << "Bruh! Invalid expr T_T ";
                  exit(EXIT_FAILURE);
@@ -178,13 +193,13 @@ public:
         return {};
     }
 
-    std::optional<NodeExpr*> parse_expr(const int min_prec = 0) {
-         std::optional<NodeTerm*> term_lhs = parse_term();
+    std::optional<NodeIntExpr*> parse_int_expr(const int min_prec = 0) {
+         std::optional<NodeTerm*> term_lhs = parse_int_term();
          if (!term_lhs.has_value()) {
              return {};
          }
 
-         auto expr_lhs = m_allocator.alloc<NodeExpr>();
+         auto expr_lhs = m_allocator.alloc<NodeIntExpr>();
          expr_lhs->var = term_lhs.value();
 
          while (true) {
@@ -202,14 +217,14 @@ public:
              }
              const Token op = consume();
              const int next_min_prec = prec.value() + 1;
-             const auto expr_rhs = parse_expr(next_min_prec);
+             const auto expr_rhs = parse_int_expr(next_min_prec);
              if (!expr_rhs.has_value()) {
                  std::cout << "Bruh! Invalid expr T_T ";
                  exit(EXIT_FAILURE);
              }
 
              const auto expr = m_allocator.alloc<NodeBinExpr>();
-             const auto expr_lhs2 = m_allocator.alloc<NodeExpr>();
+             const auto expr_lhs2 = m_allocator.alloc<NodeIntExpr>();
              if (op.Type == TokenType::plus) {
                  const auto add = m_allocator.alloc<NodeBinExprAdd>();
                  expr_lhs2->var = expr_lhs->var;
@@ -242,6 +257,34 @@ public:
          return expr_lhs;
     }
 
+    std::optional<NodeBoolTerm*> parse_bool_term() {
+         if (peek().has_value() && peek().value().Type == TokenType::bool_lit) {
+             const auto term = m_allocator.alloc<NodeBoolTerm>();
+             const auto term_lit = m_allocator.alloc<NodeBoolTermLit>();
+             term_lit->bool_lit = consume();
+             term->var = term_lit;
+             return term;
+         }
+         if (peek().has_value() && peek().value().Type == TokenType::ident) {
+             const auto node_ident = m_allocator.alloc<NodeTermIdent>();
+             node_ident->ident = consume();
+             const auto term = m_allocator.alloc<NodeBoolTerm>();
+             term->var = node_ident;
+             return term;
+         }
+         return {};
+     }
+
+    std::optional<NodeBoolExpr*> parse_bool_expr() {
+         if (const auto term = parse_bool_term()) {
+             const auto expr = m_allocator.alloc<NodeBoolExpr>();
+             expr->var = term.value();
+             return expr;
+         }
+
+         return {};
+     }
+
     std::optional<NodeScope*> parse_scope() {
          if (peek().has_value() && peek().value().Type == TokenType::open_curly) {
              consume();
@@ -263,7 +306,7 @@ public:
                  try_consume(TokenType::open_parent, "No '(' after if");
                  const auto if_pred = m_allocator.alloc<NodeIfPred>();
                  const auto elseif = m_allocator.alloc<NodeElseIf>();
-                 if (const auto expr = parse_expr()) {
+                 if (const auto expr = parse_bool_expr()) {
                      elseif->expr = expr.value();
                      try_consume(TokenType::close_parent, "No ')' after if");
                      if (const auto scope = parse_scope()) {
@@ -298,7 +341,7 @@ public:
          if (peek().has_value() && peek().value().Type == TokenType::exit) {
             consume();
             try_consume(TokenType::open_parent, "Bruh! No open parenthesis.");
-            if (const auto node_expr = parse_expr()) {
+            if (const auto node_expr = parse_int_expr()) {
                 try_consume(TokenType::close_parent, "Bruh! No open parenthesis.");
                 try_consume(TokenType::semi, "Bruh! No semi after exit T_T ");
                 const auto node_stmt = m_allocator.alloc<NodeStmtExit>();
@@ -315,7 +358,7 @@ public:
             consume();
             const Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
-            if (const auto node_expr = parse_expr()) {
+            if (const auto node_expr = parse_int_expr()) {
                 try_consume(TokenType::semi, "Bruh! No semi.");
                 const auto node_stmt = m_allocator.alloc<NodeStmtInt>();
                 node_stmt->expr = node_expr.value();
@@ -331,7 +374,7 @@ public:
              consume();
              try_consume(TokenType::open_parent, "Bruh! No open parenthesis.");
              const auto stmt_if = m_allocator.alloc<NodeStmtIf>();
-             if (const auto node_expr = parse_expr()) {
+             if (const auto node_expr = parse_bool_expr()) {
                  stmt_if->expr = node_expr.value();
                  try_consume(TokenType::close_parent, "Bruh! No close parenthesis");
                  if (const auto scope = parse_scope()) {
@@ -358,7 +401,7 @@ public:
                  const auto node_var_reassign = m_allocator.alloc<NodeStmtVarReassignment>();
                  node_var_reassign->ident = consume();
                  consume();
-                 if (const auto node_expr = parse_expr()) {
+                 if (const auto node_expr = parse_int_expr()) {
                      try_consume(TokenType::semi, "Bruh! No semi.");
                      node_var_reassign->expr = node_expr.value();
                      stmt->var = node_var_reassign;
@@ -391,7 +434,7 @@ public:
                  node_instAdd->ident = consume();
                  consume();
                  consume();
-                 if (const auto node_expr = parse_expr()) {
+                 if (const auto node_expr = parse_int_expr()) {
                      node_instAdd->expr = node_expr.value();
                      try_consume(TokenType::semi, "Bruh! No semi.");
                      node_instOp->var = node_instAdd;
@@ -405,7 +448,7 @@ public:
                  node_instSub->ident = consume();
                  consume();
                  consume();
-                 if (const auto node_expr = parse_expr()) {
+                 if (const auto node_expr = parse_int_expr()) {
                      node_instSub->expr = node_expr.value();
                      try_consume(TokenType::semi, "Bruh! No semi.");
                      node_instOp->var = node_instSub;
@@ -419,7 +462,7 @@ public:
                  node_instMul->ident = consume();
                  consume();
                  consume();
-                 if (const auto node_expr = parse_expr()) {
+                 if (const auto node_expr = parse_int_expr()) {
                      node_instMul->expr = node_expr.value();
                      try_consume(TokenType::semi, "Bruh! No semi.");
                      node_instOp->var = node_instMul;
@@ -433,7 +476,7 @@ public:
                  node_instDiv->ident = consume();
                  consume();
                  consume();
-                 if (const auto node_expr = parse_expr()) {
+                 if (const auto node_expr = parse_int_expr()) {
                      node_instDiv->expr = node_expr.value();
                      try_consume(TokenType::semi, "Bruh! No semi.");
                      node_instOp->var = node_instDiv;
@@ -445,7 +488,7 @@ public:
          if (peek().has_value() && peek().value().Type == TokenType::repeat) {
              consume();
              try_consume(TokenType::open_parent, "Bruh! No '('");
-             if (const auto node_expr = parse_expr()) {
+             if (const auto node_expr = parse_int_expr()) {
                  try_consume(TokenType::close_parent, "Bruh! No ')'");
                  if (const auto scope = parse_scope()) {
                      const auto stmt = m_allocator.alloc<NodeStmt>();
@@ -459,7 +502,22 @@ public:
              std::cout << "Bruh! invalid expr! \n";
              exit(EXIT_FAILURE);
          }
-
+         if (peek().has_value() && peek().value().Type == TokenType::_bool) {
+             consume();
+             const Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
+             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
+             if (const auto node_bool_expr = parse_bool_expr()) {
+                 try_consume(TokenType::semi, "Bruh! No semi.");
+                 const auto node_bool = m_allocator.alloc<NodeStmtBool>();
+                 node_bool->expr = node_bool_expr.value();
+                 node_bool->ident = ident;
+                 const auto stmt = m_allocator.alloc<NodeStmt>();
+                 stmt->var = node_bool;
+                 return stmt;
+             }
+             std::cout << "Bruh! invalid expr! \n";
+             exit(EXIT_FAILURE);
+         }
 
         return {};
 

@@ -75,7 +75,7 @@ public:
         std::visit(visitor, bin_expr->var);
     }
 
-    void gen_expr(const NodeExpr* expr) {
+    void gen_expr(const NodeIntExpr* expr) {
         struct ExprVisitor {
             Generator& gen;
             void operator()(const NodeTerm* expt_term) const {
@@ -96,6 +96,39 @@ public:
             gen_stmt(stmt);
         }
         end_scope();
+
+    }
+
+    void gen_bool_term(const NodeBoolTerm* expr) {
+        struct BoolExprVisitor {
+            Generator& gen;
+
+            void operator() (const NodeBoolTermLit* term_bool_lit) const {
+                if (term_bool_lit->bool_lit.Value.value() == "правда") {
+                    gen.m_output << "\tmov rax, 1\n";
+                    gen.push("rax");
+                }
+                else {
+                    gen.m_output << "\tmov rax, 0\n";
+                    gen.push("rax");
+                }
+            }
+            void operator() (const NodeTermIdent* term_ident) const {
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(), [&](const Var& var){return var.ident  == term_ident->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
+                    std::cout << "Ident not declared: " << term_ident->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                gen.push("QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "]");
+            }
+        };
+
+        BoolExprVisitor visitor {.gen = *this};
+        std::visit(visitor, expr->var);
+    }
+
+    void gen_bool_expr(const NodeBoolExpr* expr) {
+        gen_bool_term(expr->var);
     }
 
     void gen_if_pred(const NodeIfPred* if_pred, const std::string& endStmt) {
@@ -104,12 +137,12 @@ public:
             Generator& gen;
             const std::string& endStmt;
             void operator()(const NodeElseIf* nodeElseIf) const {
-                gen.gen_expr(nodeElseIf->expr);
+                gen.gen_bool_expr(nodeElseIf->expr);
                 gen.pop("rax");
                 const std::string endIf = gen.create_label();
 
                 gen.m_output << "\ttest rax, rax" << "\n";
-                gen.m_output << "\tjnz " + endIf + "\n";
+                gen.m_output << "\tjz " + endIf + "\n";
                 gen.gen_scope(nodeElseIf->scope);
                 if (nodeElseIf->if_pred.has_value()) {
                     gen.m_output << "\tjmp " << endStmt << "\n";
@@ -193,6 +226,24 @@ public:
         std::visit(visitor, stmt->var);
     }
 
+
+    void gen_reassignment_expr(const NodeStmtVarReassignment* reassignment) {
+        struct reassignmentVisitior{
+            Generator& gen;
+
+            void operator() (const NodeIntExpr* int_expr) const {
+                gen.gen_expr(int_expr);
+            }
+
+            void operator() (const NodeBoolExpr* bool_expr) const {
+                gen.gen_bool_expr(bool_expr);
+            }
+        };
+
+        reassignmentVisitior visitor{.gen = *this};
+        std::visit(visitor, reassignment->expr);
+    }
+
     void gen_stmt(const NodeStmt* stmt) {
         struct StmtVisitor {
             Generator& gen;
@@ -217,12 +268,12 @@ public:
                 gen.gen_scope(scope);
             }
             void operator()(const NodeStmtIf* stmt_if) const {
-                gen.gen_expr(stmt_if->expr);
+                gen.gen_bool_expr(stmt_if->expr);
                 gen.pop("rax");
                 const std::string endIf = gen.create_label();
 
                 gen.m_output << "\ttest rax, rax" << "\n";
-                gen.m_output << "\tjnz " + endIf + "\n";
+                gen.m_output << "\tjz " + endIf + "\n";
                 gen.gen_scope(stmt_if->scope);
 
                 if (stmt_if->if_pred.has_value()) {
@@ -237,7 +288,7 @@ public:
                 }
             }
             void operator() (const NodeStmtVarReassignment* stmt_var_reassignment) const {
-                gen.gen_expr(stmt_var_reassignment->expr);
+                gen.gen_reassignment_expr(stmt_var_reassignment);
                 gen.pop("rax");
                 const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
                     [&](const Var& var){return var.ident
@@ -282,6 +333,17 @@ public:
                 gen.gen_scope(node_repeat->scope);
                 gen.m_output << "\tloop " << loop_label << "\n";
                 gen.m_output << "\t" << end_label << ":\n";
+            }
+            void operator() (const NodeStmtBool* stmt_bool) const {
+                if (std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var)
+                    {return var.ident  == stmt_bool->ident.Value.value();})
+                    != gen.m_vars.cend()) {
+                    std::cout << "Ident already used: " << stmt_bool->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                    }
+                gen.m_vars.push_back(Var{.ident = stmt_bool->ident.Value.value(), .stack_loc = gen.m_stack_size });
+                gen.gen_bool_expr(stmt_bool->expr);
             }
         };
 

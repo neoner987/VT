@@ -8,7 +8,8 @@ $$
 \begin{cases}
 
 [\text{Exit}]\\
-[\text{Var}]\\
+[\text{Int Var}]\\
+[\text{Bool Var}] \\
 [\text{Scope}]\\
 [\text{If}]\\
 [\text{VarReassigment}]\\
@@ -22,16 +23,16 @@ $$
 
 [\text{Exit}] &\to \text{вийти}([\text{Expr}]); \\
 
-[\text{Var}] &\to \text{ціле ident} = [\text{Expr}]; \\
+[\text{Int Var}] &\to \text{ціле ident} = [\text{Expr}]; \\
 
 [\text{Scope}] &\to \{  [Stmt]*  \} \\
 
-[\text{If}] &\to \text{якщо} ([\text{Expr}] ) [\text{Scope}] [\text{If\_Pred}] \\
+[\text{If}] &\to \text{якщо} ([\text{BoolExpr}] ) [\text{Scope}] [\text{If\_Pred}] \\
 
 [\text{If\_Pred}] &\to 
 \begin{cases}
 
-\text{інак якщо}([\text{Expr}] ) [\text{Scope}] [\text{If\_Pred}] \\
+\text{інак якщо}([\text{BoolExpr}] ) [\text{Scope}] [\text{If\_Pred}] \\
 \text{інак} [\text{Scope}]  \\
 null\\
 
@@ -53,7 +54,7 @@ null\\
 \begin{cases}
 
 \text{int\_lit} \\
-[\text{Var}] \\
+[\text{Int Var}] \\
 
 \end{cases}\\
 
@@ -85,7 +86,26 @@ null\\
 
 \end{cases}\\
 
-[\text{Repeat}] &\to \text{повторити}([\text{Expr}]) [\text{Scope}]
+[\text{Repeat}] &\to \text{повторити}([\text{Expr}]) [\text{Scope}] \\
+
+
+[\text{BoolExpr}] &\to 
+\begin{cases}
+
+ \text{BoolTerm} \\
+
+
+\end{cases}\\
+
+
+
+[\text{BoolTerm}] &\to 
+\begin{cases}
+
+ \text{bool\_lit} \\
+[\text{Bool Var}] \\
+
+\end{cases}\\
 
 
 \end{align}

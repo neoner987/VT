@@ -32,7 +32,9 @@ enum class TokenType {
     close_curly,
     _if,
     _else,
-    repeat
+    repeat,
+    bool_lit,
+    _bool
 };
 
 inline std::optional<int> bin_prec(TokenType type) {
@@ -105,6 +107,14 @@ public:
                     }
                     else if (buffer == "повторити") {
                         tokens.push_back(Token(TokenType::repeat));
+                        buffer.clear();
+                    }
+                    else if (buffer == "булеве") {
+                        tokens.push_back(Token(TokenType::_bool));
+                        buffer.clear();
+                    }
+                    else if (buffer == "правда" || buffer == "хиба") {
+                        tokens.push_back(Token(TokenType::bool_lit, buffer));
                         buffer.clear();
                     }
                     else {
