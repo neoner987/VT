@@ -256,7 +256,7 @@ public:
                     std::cout << "Ident not declared: " << stmt_var_reassignment->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                gen.m_output << "\tadd QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], 1\n";
+                gen.m_output << "\tinc QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "]\n";
             }
             void operator() (const NodeVarDec* stmt_var_reassignment) const {
                 const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
@@ -266,12 +266,25 @@ public:
                     std::cout << "Ident not declared: " << stmt_var_reassignment->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                gen.m_output << "\tsub QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], 1\n";
+                gen.m_output << "\tdec QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "]\n";
             }
             void operator() (const NodeStmtInstOp* op_stmt) const {
                 gen.gen_inst_op(op_stmt);
             }
+            void operator() (const NodeStmtRepeat* node_repeat) const {
+                gen.gen_expr(node_repeat->expr);
+                gen.pop("rcx");
+                std::string end_label = gen.create_label();
+                gen.m_output << "\ttest rcx, rcx\n";
+                gen.m_output << "\tjz " << end_label << "\n";
+                std::string loop_label = gen.create_label();
+                gen.m_output << "\t" << loop_label << ":\n";
+                gen.gen_scope(node_repeat->scope);
+                gen.m_output << "\tloop " << loop_label << "\n";
+                gen.m_output << "\t" << end_label << ":\n";
+            }
         };
+
 
         StmtVisitor visitor{.gen = *this};
         std::visit(visitor, stmt->var);

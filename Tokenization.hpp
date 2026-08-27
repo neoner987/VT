@@ -103,6 +103,10 @@ public:
                         tokens.push_back(Token(TokenType::_else));
                         buffer.clear();
                     }
+                    else if (buffer == "повторити") {
+                        tokens.push_back(Token(TokenType::repeat));
+                        buffer.clear();
+                    }
                     else {
                         tokens.push_back(Token(TokenType::ident, buffer));
                         buffer.clear();

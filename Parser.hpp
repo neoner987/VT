@@ -122,8 +122,13 @@ struct NodeStmtInstOp {
     std::variant<NodeInstAdd*, NodeInstSub*, NodeInstMul*, NodeInstDiv*> var;
 };
 
+struct NodeStmtRepeat {
+    NodeExpr* expr;
+    NodeScope* scope;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtInt*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*, NodeVarInc*, NodeVarDec*, NodeStmtInstOp*> var;
+    std::variant<NodeStmtExit*, NodeStmtInt*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*, NodeVarInc*, NodeVarDec*, NodeStmtInstOp*, NodeStmtRepeat*> var;
 };
 
 struct NodeProg {
@@ -290,7 +295,7 @@ public:
      }
 
     std::optional<NodeStmt*> parse_stmt() {
-        if (peek().has_value() && peek().value().Type == TokenType::exit) {
+         if (peek().has_value() && peek().value().Type == TokenType::exit) {
             consume();
             try_consume(TokenType::open_parent, "Bruh! No open parenthesis.");
             if (const auto node_expr = parse_expr()) {
@@ -306,7 +311,7 @@ public:
             exit(EXIT_FAILURE);
 
         }
-        if (peek().has_value() && peek().value().Type == TokenType::_int) {
+         if (peek().has_value() && peek().value().Type == TokenType::_int) {
             consume();
             const Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
@@ -437,6 +442,24 @@ public:
                  }
              }
          }
+         if (peek().has_value() && peek().value().Type == TokenType::repeat) {
+             consume();
+             try_consume(TokenType::open_parent, "Bruh! No '('");
+             if (const auto node_expr = parse_expr()) {
+                 try_consume(TokenType::close_parent, "Bruh! No ')'");
+                 if (const auto scope = parse_scope()) {
+                     const auto stmt = m_allocator.alloc<NodeStmt>();
+                     const auto node_repeat = m_allocator.alloc<NodeStmtRepeat>();
+                     node_repeat->expr = node_expr.value();
+                     node_repeat->scope = scope.value();
+                     stmt->var = node_repeat;
+                     return stmt;
+                 }
+             }
+             std::cout << "Bruh! invalid expr! \n";
+             exit(EXIT_FAILURE);
+         }
+
 
         return {};
 

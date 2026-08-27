@@ -14,7 +14,8 @@ $$
 [\text{VarReassigment}]\\
 [\text{VarIncrement}] \\ 
 [\text{VarDecrement}] \\ 
-[\text{InstOp}]
+[\text{InstOp}] \\
+[\text{Repeat}] \\
 
 \end{cases} \\
 
@@ -83,6 +84,9 @@ null\\
 [\text{Var}] /= [\text{Expr}] \\
 
 \end{cases}\\
+
+[\text{Repeat}] &\to \text{повторити}([\text{Expr}]) [\text{Scope}]
+
 
 \end{align}
 $$
