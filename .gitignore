@@ -1,3 +1,5 @@
 /.idea
 main
-/built/
+/built/output.asm
+/built/output.o
+/built/output
