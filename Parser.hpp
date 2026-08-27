@@ -93,8 +93,37 @@ struct NodeStmtVarReassignment {
     NodeExpr* expr;
 };
 
+
+struct NodeVarInc {
+    Token ident;
+};
+struct NodeVarDec {
+    Token ident;
+};
+
+struct NodeInstAdd {
+    Token ident;
+    NodeExpr* expr;
+};
+struct NodeInstSub {
+    Token ident;
+    NodeExpr* expr;
+};
+struct NodeInstMul {
+    Token ident;
+    NodeExpr* expr;
+};
+struct NodeInstDiv {
+    Token ident;
+    NodeExpr* expr;
+};
+
+struct NodeStmtInstOp {
+    std::variant<NodeInstAdd*, NodeInstSub*, NodeInstMul*, NodeInstDiv*> var;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtInt*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*> var;
+    std::variant<NodeStmtExit*, NodeStmtInt*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*, NodeVarInc*, NodeVarDec*, NodeStmtInstOp*> var;
 };
 
 struct NodeProg {
@@ -320,17 +349,93 @@ public:
          }
          if (peek().has_value() && peek().value().Type == TokenType::ident) {
              const auto stmt = m_allocator.alloc<NodeStmt>();
-             const auto node_var_reassign = m_allocator.alloc<NodeStmtVarReassignment>();
-             node_var_reassign->ident = consume();
-             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
-             if (const auto node_expr = parse_expr()) {
+             if (peek(1).has_value() && peek(1).value().Type == TokenType::eq){
+                 const auto node_var_reassign = m_allocator.alloc<NodeStmtVarReassignment>();
+                 node_var_reassign->ident = consume();
+                 consume();
+                 if (const auto node_expr = parse_expr()) {
+                     try_consume(TokenType::semi, "Bruh! No semi.");
+                     node_var_reassign->expr = node_expr.value();
+                     stmt->var = node_var_reassign;
+                     return stmt;
+                 }
+                 std::cout << "Bruh! Invalid expr in reassignment.";
+                 exit(EXIT_FAILURE);
+             }
+             if (peek(1).has_value() && peek(1).value().Type == TokenType::plus && peek(2).has_value() && peek(2).value().Type == TokenType::plus) {
+                 const auto node_var_inc = m_allocator.alloc<NodeVarInc>();
+                 node_var_inc->ident = consume();
+                 consume();
+                 consume();
                  try_consume(TokenType::semi, "Bruh! No semi.");
-                 node_var_reassign->expr = node_expr.value();
-                 stmt->var = node_var_reassign;
+                 stmt->var = node_var_inc;
                  return stmt;
              }
-             std::cout << "Bruh! Invalid expr in reassignment.";
-             exit(EXIT_FAILURE);
+             if (peek(1).has_value() && peek(1).value().Type == TokenType::minus && peek(2).has_value() && peek(2).value().Type == TokenType::minus) {
+                 const auto node_var_dec = m_allocator.alloc<NodeVarDec>();
+                 node_var_dec->ident = consume();
+                 consume();
+                 consume();
+                 try_consume(TokenType::semi, "Bruh! No semi.");
+                 stmt->var = node_var_dec;
+                 return stmt;
+             }
+             if (peek(1).has_value() && peek(1).value().Type == TokenType::plus && peek(2).has_value() && peek(2).value().Type == TokenType::eq) {
+                 const auto node_instOp = m_allocator.alloc<NodeStmtInstOp>();
+                 const auto node_instAdd = m_allocator.alloc<NodeInstAdd>();
+                 node_instAdd->ident = consume();
+                 consume();
+                 consume();
+                 if (const auto node_expr = parse_expr()) {
+                     node_instAdd->expr = node_expr.value();
+                     try_consume(TokenType::semi, "Bruh! No semi.");
+                     node_instOp->var = node_instAdd;
+                     stmt->var = node_instOp;
+                     return stmt;
+                 }
+             }
+             if (peek(1).has_value() && peek(1).value().Type == TokenType::minus && peek(2).has_value() && peek(2).value().Type == TokenType::eq) {
+                 const auto node_instOp = m_allocator.alloc<NodeStmtInstOp>();
+                 const auto node_instSub = m_allocator.alloc<NodeInstSub>();
+                 node_instSub->ident = consume();
+                 consume();
+                 consume();
+                 if (const auto node_expr = parse_expr()) {
+                     node_instSub->expr = node_expr.value();
+                     try_consume(TokenType::semi, "Bruh! No semi.");
+                     node_instOp->var = node_instSub;
+                     stmt->var = node_instOp;
+                     return stmt;
+                 }
+             }
+             if (peek(1).has_value() && peek(1).value().Type == TokenType::star && peek(2).has_value() && peek(2).value().Type == TokenType::eq) {
+                 const auto node_instOp = m_allocator.alloc<NodeStmtInstOp>();
+                 const auto node_instMul = m_allocator.alloc<NodeInstMul>();
+                 node_instMul->ident = consume();
+                 consume();
+                 consume();
+                 if (const auto node_expr = parse_expr()) {
+                     node_instMul->expr = node_expr.value();
+                     try_consume(TokenType::semi, "Bruh! No semi.");
+                     node_instOp->var = node_instMul;
+                     stmt->var = node_instOp;
+                     return stmt;
+                 }
+             }
+             if (peek(1).has_value() && peek(1).value().Type == TokenType::fslash && peek(2).has_value() && peek(2).value().Type == TokenType::eq) {
+                 const auto node_instOp = m_allocator.alloc<NodeStmtInstOp>();
+                 const auto node_instDiv = m_allocator.alloc<NodeInstDiv>();
+                 node_instDiv->ident = consume();
+                 consume();
+                 consume();
+                 if (const auto node_expr = parse_expr()) {
+                     node_instDiv->expr = node_expr.value();
+                     try_consume(TokenType::semi, "Bruh! No semi.");
+                     node_instOp->var = node_instDiv;
+                     stmt->var = node_instOp;
+                     return stmt;
+                 }
+             }
          }
 
         return {};

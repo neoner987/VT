@@ -31,7 +31,8 @@ enum class TokenType {
     open_curly,
     close_curly,
     _if,
-    _else
+    _else,
+    repeat
 };
 
 inline std::optional<int> bin_prec(TokenType type) {

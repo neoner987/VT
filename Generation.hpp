@@ -130,6 +130,69 @@ public:
         std::visit(visitor, if_pred->var);
     }
 
+    void gen_inst_op(const NodeStmtInstOp* stmt) {
+
+        struct InstOpVisitor {
+            Generator& gen;
+
+            void operator() ( const NodeInstAdd* instAdd) const {
+                gen.gen_expr(instAdd->expr);
+                gen.pop("rax");
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var){return var.ident
+                        == instAdd->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
+                    std::cout << "Ident not declared: " << instAdd->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                gen.m_output << "\tadd QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax \n";
+            }
+            void operator() ( const NodeInstSub* instSub) const {
+                gen.gen_expr(instSub->expr);
+                gen.pop("rax");
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var){return var.ident
+                        == instSub->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
+                    std::cout << "Ident not declared: " << instSub->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                gen.m_output << "\tsub QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax\n";
+            }
+            void operator() ( const NodeInstMul* instMul) const {
+                gen.gen_expr(instMul->expr);
+                gen.pop("rax");
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var){return var.ident
+                        == instMul->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
+                    std::cout << "Ident not declared: " << instMul->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                gen.m_output << "\tmul QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "]\n";
+                gen.m_output << "\tmov QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax\n";
+            }
+            void operator() ( const NodeInstDiv* instDiv) const {
+                gen.gen_expr(instDiv->expr);
+                gen.pop("rbx");
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var){return var.ident
+                        == instDiv->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
+                    std::cout << "Ident not declared: " << instDiv->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                gen.m_output << "\tmov rax, QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "]\n";
+                gen.m_output << "\tdiv rbx\n";
+                gen.m_output << "\tmov QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax\n";
+            }
+        };
+
+
+        InstOpVisitor visitor{.gen = *this};
+        std::visit(visitor, stmt->var);
+    }
+
     void gen_stmt(const NodeStmt* stmt) {
         struct StmtVisitor {
             Generator& gen;
@@ -183,7 +246,30 @@ public:
                     std::cout << "Ident not declared: " << stmt_var_reassignment->ident.Value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                gen.m_output << "mov QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax\n";
+                gen.m_output << "\tmov QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax\n";
+            }
+            void operator() (const NodeVarInc* stmt_var_reassignment) const {
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var){return var.ident
+                        == stmt_var_reassignment->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
+                    std::cout << "Ident not declared: " << stmt_var_reassignment->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                gen.m_output << "\tadd QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], 1\n";
+            }
+            void operator() (const NodeVarDec* stmt_var_reassignment) const {
+                const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
+                    [&](const Var& var){return var.ident
+                        == stmt_var_reassignment->ident.Value.value();});
+                if ( it == gen.m_vars.cend()) {
+                    std::cout << "Ident not declared: " << stmt_var_reassignment->ident.Value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                gen.m_output << "\tsub QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], 1\n";
+            }
+            void operator() (const NodeStmtInstOp* op_stmt) const {
+                gen.gen_inst_op(op_stmt);
             }
         };
 
