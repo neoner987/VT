@@ -8,8 +8,8 @@ $$
 \begin{cases}
 
 [\text{Exit}]\\
-[\text{Int Var}]\\
-[\text{Bool Var}] \\
+[\text{IntVar}]\\
+[\text{BoolVar}] \\
 [\text{Scope}]\\
 [\text{If}]\\
 [\text{VarReassigment}]\\
@@ -21,7 +21,7 @@ $$
 \end{cases} \\
 
 
-[\text{Exit}] &\to \text{вийти}([\text{Expr}]); \\
+[\text{Exit}] &\to \text{вийти}([\text{IntExpr}]); \\
 
 [\text{Int Var}] &\to \text{ціле ident} = [\text{Expr}]; \\
 
@@ -34,14 +34,22 @@ $$
 
 \text{інак якщо}([\text{BoolExpr}] ) [\text{Scope}] [\text{If\_Pred}] \\
 \text{інак} [\text{Scope}]  \\
+
 null\\
 
 \end{cases}\\
 
-[\text{VarReassigment}] &\to \text{ident} = [\text{Expr}]; \\
+[\text{VarReassigment}] &\to \text{ident} = 
+\begin{cases}
+
+\text{Bool\_lit} \\
+\text{int\_lit} \\
+\text{ident}
+
+\end{cases}\\
 
 
-[\text{Expr}] &\to
+[\text{IntExpr}] &\to
 \begin{cases}
 
 [\text{Term}] \\
@@ -54,45 +62,67 @@ null\\
 \begin{cases}
 
 \text{int\_lit} \\
-[\text{Int Var}] \\
+[\text{IntVar}] \\
+[\text{IntParentExpr}]\\
 
 \end{cases}\\
 
+
+[\text{IntParentExpr}] &\to [\text{IntExpr}] \\
 
 [\text{BinExpr}] &\to
 \begin{cases}
 
-[\text{Expr}] + [\text{Expr}];  \text{pres = 0} \\
-[\text{Expr}] - [\text{Expr}];  \text{pres = 0} \\
-[\text{Expr}] * [\text{Expr}];  \text{pres = 1} \\
-[\text{Expr}] / [\text{Expr}];  \text{pres = 1} \\
+[\text{IntExpr}] + [\text{IntExpr}];  \text{pres = 0} \\
+[\text{IntExpr}] - [\text{IntExpr}];  \text{pres = 0} \\
+[\text{IntExpr}] * [\text{IntExpr}];  \text{pres = 1} \\
+[\text{IntExpr}] / [\text{IntExpr}];  \text{pres = 1} \\
 
 \end{cases}\\
 
-[\text{VarIncrement}] &\to [\text{Var}]++; \\
+[\text{VarIncrement}] &\to [\text{IntVar}]++; \\
 
 
 
-[\text{VarDecrement}] &\to [\text{Var}] --; \\
+[\text{VarDecrement}] &\to [\text{IntVar}] --; \\
 
 
 [\text{InstOp}] &\to 
 \begin{cases}
 
-[\text{Var}] += [\text{Expr}] \\
-[\text{Var}] -= [\text{Expr}] \\
-[\text{Var}] *= [\text{Expr}] \\
-[\text{Var}] /= [\text{Expr}] \\
+[\text{IntVar}] += [\text{IntExpr}] \\
+[\text{IntVar}] -= [\text{IntExpr}] \\
+[\text{IntVar}] *= [\text{IntExpr}] \\
+[\text{IntVar}] /= [\text{IntExpr}] \\
 
 \end{cases}\\
 
 [\text{Repeat}] &\to \text{повторити}([\text{Expr}]) [\text{Scope}] \\
 
 
+[\text{BoolOpExpr}] &\to
+\begin{cases}
+
+[\text{BoolExpr}] \&\& [\text{BoolExpr}]; \\
+[\text{BoolExpr}] || [\text{BoolExpr}]; \\
+![\text{BoolExpr}] \\
+
+[\text{IntVar}] == [\text{IntExpr}] \\
+[\text{IntVar}] != [\text{IntExpr}] \\
+[\text{IntVar}] > [\text{IntExpr}] \\
+[\text{IntVar}] < [\text{IntExpr}] \\
+[\text{IntVar}] >= [\text{IntExpr}] \\
+[\text{IntVar}] <= [\text{IntExpr}] \\
+
+
+\end{cases}\\
+
+
 [\text{BoolExpr}] &\to 
 \begin{cases}
 
- \text{BoolTerm} \\
+ [\text{BoolTerm}] \\
+ [\text{BoolOpExpr}] \\
 
 
 \end{cases}\\
@@ -103,9 +133,12 @@ null\\
 \begin{cases}
 
  \text{bool\_lit} \\
-[\text{Bool Var}] \\
+[\text{BoolVar}] \\
+[\text{BoolParentExpr}] \\
 
 \end{cases}\\
+
+[\text{BoolParentExpr}] &\to [\text{BoolExpr}]\\
 
 
 \end{align}

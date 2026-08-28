@@ -1,5 +1,5 @@
 # VT
-I’m learning how compilers works and try to make my own program language. So i'm watching a video and adapt that code to my program.
+I’m learning how compilers works and try to make my own program language. So I'm watching a video and adapt that code to my program.
 
 For now, its very small and not Turing complete, but it will be bigger.  
 
@@ -28,7 +28,7 @@ if statement:
 }  
 
 else if predicate:
-якщо ( хиба )  
+якщо ( хиба && !біб)  
 {    
     any statements  
 }    

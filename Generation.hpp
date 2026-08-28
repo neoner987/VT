@@ -25,7 +25,7 @@ public:
                 gen.push("QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "]");
             }
             void operator()(const NodeTermParent* term_parent) const {
-                gen.gen_expr(term_parent->expr);
+                gen.gen_int_expr(term_parent->expr);
             }
         };
 
@@ -38,32 +38,32 @@ public:
         struct BinExprVisitor {
             Generator& gen;
             void operator()(const NodeBinExprAdd* add_expr) const {
-                gen.gen_expr(add_expr->rhs);
-                gen.gen_expr(add_expr->lhs);
+                gen.gen_int_expr(add_expr->rhs);
+                gen.gen_int_expr(add_expr->lhs);
                 gen.pop("rax");
                 gen.pop("rbx");
                 gen.m_output << "\tadd rax, rbx" << "\n";
                 gen.push("rax");
             }
             void operator()(const NodeBinExprSub* sub_expr) const {
-                gen.gen_expr(sub_expr->rhs);
-                gen.gen_expr(sub_expr->lhs);
+                gen.gen_int_expr(sub_expr->rhs);
+                gen.gen_int_expr(sub_expr->lhs);
                 gen.pop("rax");
                 gen.pop("rbx");
                 gen.m_output << "\tsub rax, rbx" << "\n";
                 gen.push("rax");
             }
             void operator()(const NodeBinExprMult* mult_expr) const {
-                gen.gen_expr(mult_expr->rhs);
-                gen.gen_expr(mult_expr->lhs);
+                gen.gen_int_expr(mult_expr->rhs);
+                gen.gen_int_expr(mult_expr->lhs);
                 gen.pop("rax");
                 gen.pop("rbx");
                 gen.m_output << "\tmul rbx" << "\n";
                 gen.push("rax");
             }
             void operator()(const NodeBinExprDiv* div_expr) const {
-                gen.gen_expr(div_expr->rhs);
-                gen.gen_expr(div_expr->lhs);
+                gen.gen_int_expr(div_expr->rhs);
+                gen.gen_int_expr(div_expr->lhs);
                 gen.pop("rax");
                 gen.pop("rbx");
                 gen.m_output << "\tdiv rbx" << "\n";
@@ -75,7 +75,7 @@ public:
         std::visit(visitor, bin_expr->var);
     }
 
-    void gen_expr(const NodeIntExpr* expr) {
+    void gen_int_expr(const NodeIntExpr* expr) {
         struct ExprVisitor {
             Generator& gen;
             void operator()(const NodeTerm* expt_term) const {
@@ -105,11 +105,11 @@ public:
 
             void operator() (const NodeBoolTermLit* term_bool_lit) const {
                 if (term_bool_lit->bool_lit.Value.value() == "правда") {
-                    gen.m_output << "\tmov rax, 1\n";
+                    gen.m_output << "\tmov al, 11111111b\n";
                     gen.push("rax");
                 }
                 else {
-                    gen.m_output << "\tmov rax, 0\n";
+                    gen.m_output << "\tmov al, 00000000b\n";
                     gen.push("rax");
                 }
             }
@@ -121,14 +121,119 @@ public:
                 }
                 gen.push("QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "]");
             }
+            void operator() (const NodeBoolTermParent* term) const {
+                gen.gen_bool_expr(term->expr);
+            }
+            void operator() (const NodeBoolTermNot* NotTerm) const {
+                gen.gen_bool_term(NotTerm->term);
+                gen.pop("rax");
+                gen.m_output << "\tnot al\n";
+                gen.push("rax");
+            }
         };
 
         BoolExprVisitor visitor {.gen = *this};
         std::visit(visitor, expr->var);
     }
 
+    void gen_bool_op_expr (const NodeBoolExprOp*  opExpr) {
+        struct BoolOpExprVisitor {
+            Generator& gen;
+            void operator() (const NodeBoolExprAnd* AndExpr) const {
+                gen.gen_bool_expr(AndExpr->lhs);
+                gen.gen_bool_expr(AndExpr->rhs);
+                gen.pop("rax");
+                gen.pop("r15");
+                gen.m_output << "\tand r15b, r15b\n";
+                gen.push("rax");
+            }
+            void operator() (const NodeBoolExprOr* OrExpr) const {
+                gen.gen_bool_expr(OrExpr->lhs);
+                gen.gen_bool_expr(OrExpr->rhs);
+                gen.pop("rax");
+                gen.pop("r15");
+                gen.m_output << "\tor al, r15b\n";
+                gen.push("rax");
+            }
+            void operator() (const NodeBoolOpG* nodeOpG) const {
+                gen.gen_int_expr(nodeOpG->lhs);
+                gen.gen_int_expr(nodeOpG->rhs);
+                gen.m_output << "\txor rcx, rcx\n";
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tcmp rbx, rax\n";
+                gen.m_output << "\tseta cl\n";
+                gen.push("RCX");
+            }
+            void operator() (const NodeBoolOpL* nodeOpL) const {
+                gen.gen_int_expr(nodeOpL->lhs);
+                gen.gen_int_expr(nodeOpL->rhs);
+                gen.m_output << "\txor rcx, rcx\n";
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tcmp rbx, rax\n";
+                gen.m_output << "\tsetb cl\n";
+                gen.push("RCX");
+            }
+            void operator() (const NodeBoolOpGE* nodeOpGE) const {
+                gen.gen_int_expr(nodeOpGE->lhs);
+                gen.gen_int_expr(nodeOpGE->rhs);
+                gen.m_output << "\txor rcx, rcx\n";
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tcmp rbx, rax\n";
+                gen.m_output << "\tsetae cl\n";
+                gen.push("RCX");
+            }
+            void operator() (const NodeBoolOpLE* nodeOpLE) const {
+                gen.gen_int_expr(nodeOpLE->lhs);
+                gen.gen_int_expr(nodeOpLE->rhs);
+                gen.m_output << "\txor rcx, rcx\n";
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tcmp rbx, rax\n";
+                gen.m_output << "\tsetbe cl\n";
+                gen.push("RCX");
+            }
+            void operator() (const NodeBoolOpEq* nodeOpEq) const {
+                gen.gen_int_expr(nodeOpEq->lhs);
+                gen.gen_int_expr(nodeOpEq->rhs);
+                gen.m_output << "\txor rcx, rcx\n";
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tcmp rbx, rax\n";
+                gen.m_output << "\tsete cl\n";
+                gen.push("RCX");
+            }
+            void operator() (const NodeBoolOpNE* nodeOpNE) const {
+                gen.gen_int_expr(nodeOpNE->lhs);
+                gen.gen_int_expr(nodeOpNE->rhs);
+                gen.m_output << "\txor rcx, rcx\n";
+                gen.pop("rax");
+                gen.pop("rbx");
+                gen.m_output << "\tcmp rbx, rax\n";
+                gen.m_output << "\tsetne cl\n";
+                gen.push("RCX");
+            }
+        };
+
+        BoolOpExprVisitor visitor {.gen = *this};
+        std::visit(visitor, opExpr->var);
+    }
+
     void gen_bool_expr(const NodeBoolExpr* expr) {
-        gen_bool_term(expr->var);
+        struct BoolExprVisitor {
+            Generator& gen;
+            void operator() (const NodeBoolTerm* term) const {
+                gen.gen_bool_term(term);
+            }
+            void operator() (const NodeBoolExprOp* opExpr) const {
+                gen.gen_bool_op_expr(opExpr);
+            }
+        };
+
+        BoolExprVisitor visitor{.gen = *this};
+        std::visit(visitor, expr->var);
     }
 
     void gen_if_pred(const NodeIfPred* if_pred, const std::string& endStmt) {
@@ -141,7 +246,7 @@ public:
                 gen.pop("rax");
                 const std::string endIf = gen.create_label();
 
-                gen.m_output << "\ttest rax, rax" << "\n";
+                gen.m_output << "\ttest al, al" << "\n";
                 gen.m_output << "\tjz " + endIf + "\n";
                 gen.gen_scope(nodeElseIf->scope);
                 if (nodeElseIf->if_pred.has_value()) {
@@ -169,7 +274,7 @@ public:
             Generator& gen;
 
             void operator() ( const NodeInstAdd* instAdd) const {
-                gen.gen_expr(instAdd->expr);
+                gen.gen_int_expr(instAdd->expr);
                 gen.pop("rax");
                 const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
                     [&](const Var& var){return var.ident
@@ -181,7 +286,7 @@ public:
                 gen.m_output << "\tadd QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax \n";
             }
             void operator() ( const NodeInstSub* instSub) const {
-                gen.gen_expr(instSub->expr);
+                gen.gen_int_expr(instSub->expr);
                 gen.pop("rax");
                 const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
                     [&](const Var& var){return var.ident
@@ -193,7 +298,7 @@ public:
                 gen.m_output << "\tsub QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax\n";
             }
             void operator() ( const NodeInstMul* instMul) const {
-                gen.gen_expr(instMul->expr);
+                gen.gen_int_expr(instMul->expr);
                 gen.pop("rax");
                 const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
                     [&](const Var& var){return var.ident
@@ -206,7 +311,7 @@ public:
                 gen.m_output << "\tmov QWORD [rsp + " + std::to_string((gen.m_stack_size - it->stack_loc - 1)*8) + "], rax\n";
             }
             void operator() ( const NodeInstDiv* instDiv) const {
-                gen.gen_expr(instDiv->expr);
+                gen.gen_int_expr(instDiv->expr);
                 gen.pop("rbx");
                 const auto it = std::find_if(gen.m_vars.cbegin(),  gen.m_vars.cend(),
                     [&](const Var& var){return var.ident
@@ -232,7 +337,7 @@ public:
             Generator& gen;
 
             void operator() (const NodeIntExpr* int_expr) const {
-                gen.gen_expr(int_expr);
+                gen.gen_int_expr(int_expr);
             }
 
             void operator() (const NodeBoolExpr* bool_expr) const {
@@ -248,7 +353,7 @@ public:
         struct StmtVisitor {
             Generator& gen;
             void operator()(const NodeStmtExit* stmt_exit) const {
-                gen.gen_expr(stmt_exit->expr);
+                gen.gen_int_expr(stmt_exit->expr);
                 gen.m_output << "\tmov rax, 60\n";
                 gen.pop("rdi");
                 gen.m_output << "\tsyscall\n";
@@ -262,7 +367,7 @@ public:
                     exit(EXIT_FAILURE);
                 }
                 gen.m_vars.push_back(Var{.ident = stmt_int->ident.Value.value(), .stack_loc = gen.m_stack_size });
-                gen.gen_expr(stmt_int->expr);
+                gen.gen_int_expr(stmt_int->expr);
             }
             void operator()(const NodeScope* scope) const {
                 gen.gen_scope(scope);
@@ -272,7 +377,7 @@ public:
                 gen.pop("rax");
                 const std::string endIf = gen.create_label();
 
-                gen.m_output << "\ttest rax, rax" << "\n";
+                gen.m_output << "\ttest al, al" << "\n";
                 gen.m_output << "\tjz " + endIf + "\n";
                 gen.gen_scope(stmt_if->scope);
 
@@ -323,7 +428,7 @@ public:
                 gen.gen_inst_op(op_stmt);
             }
             void operator() (const NodeStmtRepeat* node_repeat) const {
-                gen.gen_expr(node_repeat->expr);
+                gen.gen_int_expr(node_repeat->expr);
                 gen.pop("rcx");
                 std::string end_label = gen.create_label();
                 gen.m_output << "\ttest rcx, rcx\n";
@@ -344,6 +449,22 @@ public:
                     }
                 gen.m_vars.push_back(Var{.ident = stmt_bool->ident.Value.value(), .stack_loc = gen.m_stack_size });
                 gen.gen_bool_expr(stmt_bool->expr);
+            }
+            void operator() (const NodeStmtWhile* stmt_while) const {
+                const std::string endLoop = gen.create_label();
+                const std::string startLoop = gen.create_label();
+                gen.m_output << "\t" << startLoop << ":\n";
+
+                gen.gen_bool_expr(stmt_while->expr);
+                gen.pop("rax");
+                gen.m_output << "\ttest al, al" << "\n";
+                gen.m_output << "\tjz " + endLoop + "\n";
+
+                gen.gen_scope(stmt_while->scope);
+                gen.m_output << "\tjmp " + startLoop + "\n";
+
+                gen.m_output << "\t" << endLoop << ":\n";
+
             }
         };
 

@@ -23,34 +23,72 @@ struct NodeTerm {
     std::variant<NodeTermIntLit*, NodeTermIdent*, NodeTermParent*> var ;
 };
 
+struct NodeBoolExpr;
+struct NodeBoolTerm;
+struct NodeBoolTermParent {
+    NodeBoolExpr* expr;
+};
 struct NodeBoolTermLit {
     Token bool_lit;
 };
-
-struct NodeBoolTerm {
-  std::variant<NodeBoolTermLit*, NodeTermIdent*> var;
+struct NodeBoolTermNot{
+    NodeBoolTerm* term;
 };
-
+struct NodeBoolTerm {
+  std::variant<NodeBoolTermLit*, NodeTermIdent*, NodeBoolTermParent*, NodeBoolTermNot*> var;
+};
+struct NodeBoolExprAnd{
+    NodeBoolExpr* lhs;
+    NodeBoolExpr* rhs;
+};
+struct NodeBoolExprOr{
+    NodeBoolExpr* lhs;
+    NodeBoolExpr* rhs;
+};
+struct NodeBoolOpG {
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
+};
+struct NodeBoolOpL {
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
+};
+struct NodeBoolOpGE {
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
+};
+struct NodeBoolOpLE {
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
+};
+struct NodeBoolOpEq {
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
+};
+struct NodeBoolOpNE {
+    NodeIntExpr* lhs;
+    NodeIntExpr* rhs;
+};
+struct NodeBoolExprOp {
+    std::variant<NodeBoolExprAnd*, NodeBoolExprOr*, NodeBoolOpEq*, NodeBoolOpNE*, NodeBoolOpG*, NodeBoolOpL*, NodeBoolOpGE*, NodeBoolOpLE*> var;
+};
 struct NodeBoolExpr {
-    NodeBoolTerm* var;
+    std::variant<NodeBoolTerm*, NodeBoolExprOp*> var;
 };
 
 struct NodeBinExprAdd {
     NodeIntExpr* lhs;
     NodeIntExpr* rhs;
 };
-
 struct NodeBinExprSub {
     NodeIntExpr* lhs;
     NodeIntExpr* rhs;
 };
-
 struct NodeBinExprMult {
     NodeIntExpr* lhs;
     NodeIntExpr* rhs;
 
 };
-
 struct NodeBinExprDiv {
     NodeIntExpr* lhs;
     NodeIntExpr* rhs;
@@ -59,7 +97,6 @@ struct NodeBinExprDiv {
 struct NodeBinExpr {
     std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMult*, NodeBinExprDiv*> var;
 };
-
 struct NodeIntExpr {
     std::variant<NodeTerm*, NodeBinExpr*> var;
 };
@@ -67,6 +104,7 @@ struct NodeIntExpr {
 struct NodeStmtExit {
     NodeIntExpr* expr;
 };
+
 struct NodeStmtInt {
     Token ident;
     NodeIntExpr* expr;
@@ -84,21 +122,17 @@ struct NodeScope {
 };
 
 struct NodeIfPred;
-
 struct NodeElseIf {
     NodeBoolExpr* expr;
     NodeScope* scope;
     std::optional<NodeIfPred*> if_pred;
 };
-
 struct NodeElse {
     NodeScope* scope;
 };
-
 struct NodeIfPred {
     std::variant<NodeElseIf*, NodeElse*> var;
 };
-
 struct NodeStmtIf {
     NodeBoolExpr* expr;
     NodeScope* scope;
@@ -110,14 +144,12 @@ struct NodeStmtVarReassignment {
     std::variant<NodeIntExpr*, NodeBoolExpr*> expr;
 };
 
-
 struct NodeVarInc {
     Token ident;
 };
 struct NodeVarDec {
     Token ident;
 };
-
 struct NodeInstAdd {
     Token ident;
     NodeIntExpr* expr;
@@ -144,8 +176,14 @@ struct NodeStmtRepeat {
     NodeScope* scope;
 };
 
+struct NodeStmtWhile {
+    NodeBoolExpr* expr;
+    NodeScope* scope;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtInt*, NodeStmtBool*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*, NodeVarInc*, NodeVarDec*, NodeStmtInstOp*, NodeStmtRepeat*> var;
+    std::variant<NodeStmtExit*, NodeStmtInt*, NodeStmtBool*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*
+        , NodeVarInc*, NodeVarDec*, NodeStmtInstOp*, NodeStmtRepeat*, NodeStmtWhile*> var;
 };
 
 struct NodeProg {
@@ -162,21 +200,21 @@ public:
     }
 
     std::optional<NodeTerm*> parse_int_term() {
-        if (peek().has_value() && peek().value().Type == TokenType::int_lit) {
+        if (try_peek(TokenType::int_lit)) {
             const auto node_expr_int_lit = m_allocator.alloc<NodeTermIntLit>();
             node_expr_int_lit->int_lit = consume();
             const auto term = m_allocator.alloc<NodeTerm>();
             term->var = node_expr_int_lit;
             return term;
         }
-        if (peek().has_value() && peek().value().Type == TokenType::ident) {
+        if (try_peek(TokenType::ident)) {
             const auto node_ident = m_allocator.alloc<NodeTermIdent>();
             node_ident->ident = consume();
             const auto term = m_allocator.alloc<NodeTerm>();
             term->var = node_ident;
             return term;
         }
-         if (peek().has_value() && peek().value().Type == TokenType::open_parent) {
+         if (try_peek(TokenType::open_parent)) {
              consume();
              const auto expr = parse_int_expr();
              if (!expr.has_value()) {
@@ -206,7 +244,7 @@ public:
              const std::optional<Token> curr_token = peek();
              std::optional<int> prec;
              if (curr_token.has_value()) {
-                 prec = bin_prec(curr_token->Type);
+                 prec = int_op_prec(curr_token->Type);
                  if (!prec.has_value() || prec < min_prec) {
                      break;
                  }
@@ -215,6 +253,7 @@ public:
              else {
                  break;
              }
+
              const Token op = consume();
              const int next_min_prec = prec.value() + 1;
              const auto expr_rhs = parse_int_expr(next_min_prec);
@@ -258,35 +297,359 @@ public:
     }
 
     std::optional<NodeBoolTerm*> parse_bool_term() {
-         if (peek().has_value() && peek().value().Type == TokenType::bool_lit) {
+         if (try_peek(TokenType::open_parent)){
+             consume();
+             if (const auto expr = parse_bool_expr()) {
+                 try_consume(TokenType::close_parent, "Bruh! Parent doesnt close!");
+                 const auto term_parent = m_allocator.alloc<NodeBoolTermParent>();
+                 term_parent->expr = expr.value();
+                 const auto term = m_allocator.alloc<NodeBoolTerm>();
+                 term->var = term_parent;
+                 return term;
+             }
+         }
+         if (try_peek(TokenType::bool_lit)) {
              const auto term = m_allocator.alloc<NodeBoolTerm>();
              const auto term_lit = m_allocator.alloc<NodeBoolTermLit>();
              term_lit->bool_lit = consume();
              term->var = term_lit;
              return term;
          }
-         if (peek().has_value() && peek().value().Type == TokenType::ident) {
+         if (try_peek(TokenType::ident)) {
              const auto node_ident = m_allocator.alloc<NodeTermIdent>();
              node_ident->ident = consume();
              const auto term = m_allocator.alloc<NodeBoolTerm>();
              term->var = node_ident;
              return term;
          }
-         return {};
-     }
-
-    std::optional<NodeBoolExpr*> parse_bool_expr() {
-         if (const auto term = parse_bool_term()) {
-             const auto expr = m_allocator.alloc<NodeBoolExpr>();
-             expr->var = term.value();
-             return expr;
+         if (try_peek(TokenType::exclamation)) {
+             consume();
+             if (const auto parent_expr = parse_bool_term()) {
+                 const auto not_term = m_allocator.alloc<NodeBoolTermNot>();
+                 not_term->term = parent_expr.value();
+                 const auto term = m_allocator.alloc<NodeBoolTerm>();
+                 term->var = not_term;
+                 return term;
+             }
          }
 
          return {};
      }
 
+    std::optional<NodeBoolExpr*> parse_bool_expr(const int min_prec = 0) {
+         if (try_peek(TokenType::ident) && (try_peek(TokenType::eq, 1) || try_peek(TokenType::less, 1)|| try_peek(TokenType::more, 1)
+             || try_peek(TokenType::exclamation, 1))) {
+             if (const auto int_expr_lhs = parse_int_expr()) {
+                 if (try_peek(TokenType::eq) && try_peek(TokenType::eq, 1)) {
+                     consume();
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeEqOp = m_allocator.alloc<NodeBoolOpEq>();
+                         NodeEqOp->lhs = int_expr_lhs.value();
+                         NodeEqOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeEqOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::exclamation) && try_peek(TokenType::eq, 1)) {
+                     consume();
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeNEOp = m_allocator.alloc<NodeBoolOpNE>();
+                         NodeNEOp->lhs = int_expr_lhs.value();
+                         NodeNEOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeNEOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::more) && !try_peek(TokenType::eq, 1)) {
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeGOp = m_allocator.alloc<NodeBoolOpG>();
+                         NodeGOp->lhs = int_expr_lhs.value();
+                         NodeGOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeGOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::more) && try_peek(TokenType::eq, 1)) {
+                     consume();
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeGEOp = m_allocator.alloc<NodeBoolOpGE>();
+                         NodeGEOp->lhs = int_expr_lhs.value();
+                         NodeGEOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeGEOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::less) && !try_peek(TokenType::eq, 1)) {
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeLOp = m_allocator.alloc<NodeBoolOpL>();
+                         NodeLOp->lhs = int_expr_lhs.value();
+                         NodeLOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeLOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::less) && try_peek(TokenType::eq, 1)) {
+                     consume();
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeLEOp = m_allocator.alloc<NodeBoolOpLE>();
+                         NodeLEOp->lhs = int_expr_lhs.value();
+                         NodeLEOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeLEOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+             }
+         }
+         if (const auto term_lhs = parse_bool_term()) {
+             if (!term_lhs.has_value()) {
+                 if (const auto int_expr_lhs = parse_int_expr()) {
+                 if (try_peek(TokenType::eq) && try_peek(TokenType::eq, 1)) {
+                     consume();
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeEqOp = m_allocator.alloc<NodeBoolOpEq>();
+                         NodeEqOp->lhs = int_expr_lhs.value();
+                         NodeEqOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeEqOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::exclamation) && try_peek(TokenType::eq, 1)) {
+                     consume();
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeNEOp = m_allocator.alloc<NodeBoolOpNE>();
+                         NodeNEOp->lhs = int_expr_lhs.value();
+                         NodeNEOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeNEOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::more)) {
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeGOp = m_allocator.alloc<NodeBoolOpG>();
+                         NodeGOp->lhs = int_expr_lhs.value();
+                         NodeGOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeGOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::more) && try_peek(TokenType::eq, 1)) {
+                     consume();
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeGEOp = m_allocator.alloc<NodeBoolOpGE>();
+                         NodeGEOp->lhs = int_expr_lhs.value();
+                         NodeGEOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeGEOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::less)) {
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeLOp = m_allocator.alloc<NodeBoolOpL>();
+                         NodeLOp->lhs = int_expr_lhs.value();
+                         NodeLOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeLOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+                 if (try_peek(TokenType::less) && try_peek(TokenType::eq, 1)) {
+                     consume();
+                     consume();
+                     if (const auto int_expr_rhs = parse_int_expr()) {
+                         const auto NodeLEOp = m_allocator.alloc<NodeBoolOpLE>();
+                         NodeLEOp->lhs = int_expr_lhs.value();
+                         NodeLEOp->rhs = int_expr_rhs.value();
+                         const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                         NodeOp->var = NodeLEOp;
+                         const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                         expr->var = NodeOp;
+                         return expr;
+                     }
+                 }
+             }
+                 return {};
+             }
+             auto expr_lhs = m_allocator.alloc<NodeBoolExpr>();
+             expr_lhs->var = term_lhs.value();
+
+             while (true) {
+                 const std::optional<Token> curr_token = peek();
+                 std::optional<int> prec;
+                 if (curr_token.has_value()) {
+                     prec = bool_op_prec(curr_token->Type);
+                     if (!prec.has_value() || prec < min_prec) {
+                         break;
+                     }
+                 }
+                 else {
+                     break;
+                 }
+                 const Token op = consume();
+                 consume();
+
+                 const int next_min_prec = prec.value() + 1;
+                 const auto expr_rhs = parse_bool_expr(next_min_prec);
+                 if (!expr_rhs.has_value()) {
+                     std::cout << "Bruh! Invalid expr T_T ";
+                     exit(EXIT_FAILURE);
+                 }
+
+                 const auto expr = m_allocator.alloc<NodeBoolExprOp>();
+                 const auto expr_lhs2 = m_allocator.alloc<NodeBoolExpr>();
+                 if (op.Type == TokenType::ampersand) {
+                     const auto NodeAnd = m_allocator.alloc<NodeBoolExprAnd>();
+                     expr_lhs2->var = expr_lhs->var;
+                     NodeAnd->lhs = expr_lhs2;
+                     NodeAnd->rhs = expr_rhs.value();
+                     expr->var = NodeAnd;
+                 } else if (op.Type == TokenType::bar) {
+                     const auto NodeOr = m_allocator.alloc<NodeBoolExprOr>();
+                     expr_lhs2->var = expr_lhs->var;
+                     NodeOr->lhs = expr_lhs2;
+                     NodeOr->rhs = expr_rhs.value();
+                     expr->var = NodeOr;
+                 }
+                 else {
+                     std::cout << "Bruh! Invalid unknown op T_T ";
+                     exit(EXIT_FAILURE);
+                 }
+                 expr_lhs->var = expr;
+             }
+
+             return expr_lhs;
+         }
+                if (const auto int_expr_lhs = parse_int_expr()) {
+                    if (try_peek(TokenType::eq) && try_peek(TokenType::eq, 1)) {
+                        consume();
+                        consume();
+                        if (const auto int_expr_rhs = parse_int_expr()) {
+                            const auto NodeEqOp = m_allocator.alloc<NodeBoolOpEq>();
+                            NodeEqOp->lhs = int_expr_lhs.value();
+                            NodeEqOp->rhs = int_expr_rhs.value();
+                            const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                            NodeOp->var = NodeEqOp;
+                            const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                            expr->var = NodeOp;
+                            return expr;
+                        }
+                    }
+                    if (try_peek(TokenType::exclamation) && try_peek(TokenType::eq, 1)) {
+                        consume();
+                        consume();
+                        if (const auto int_expr_rhs = parse_int_expr()) {
+                            const auto NodeNEOp = m_allocator.alloc<NodeBoolOpNE>();
+                            NodeNEOp->lhs = int_expr_lhs.value();
+                            NodeNEOp->rhs = int_expr_rhs.value();
+                            const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                            NodeOp->var = NodeNEOp;
+                            const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                            expr->var = NodeOp;
+                            return expr;
+                        }
+                    }
+                    if (try_peek(TokenType::more)) {
+                        consume();
+                        if (const auto int_expr_rhs = parse_int_expr()) {
+                            const auto NodeGOp = m_allocator.alloc<NodeBoolOpG>();
+                            NodeGOp->lhs = int_expr_lhs.value();
+                            NodeGOp->rhs = int_expr_rhs.value();
+                            const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                            NodeOp->var = NodeGOp;
+                            const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                            expr->var = NodeOp;
+                            return expr;
+                        }
+                    }
+                    if (try_peek(TokenType::more) && try_peek(TokenType::eq, 1)) {
+                        consume();
+                        consume();
+                        if (const auto int_expr_rhs = parse_int_expr()) {
+                            const auto NodeGEOp = m_allocator.alloc<NodeBoolOpGE>();
+                            NodeGEOp->lhs = int_expr_lhs.value();
+                            NodeGEOp->rhs = int_expr_rhs.value();
+                            const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                            NodeOp->var = NodeGEOp;
+                            const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                            expr->var = NodeOp;
+                            return expr;
+                        }
+                    }
+                    if (try_peek(TokenType::less)) {
+                        consume();
+                        if (const auto int_expr_rhs = parse_int_expr()) {
+                            const auto NodeLOp = m_allocator.alloc<NodeBoolOpL>();
+                            NodeLOp->lhs = int_expr_lhs.value();
+                            NodeLOp->rhs = int_expr_rhs.value();
+                            const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                            NodeOp->var = NodeLOp;
+                            const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                            expr->var = NodeOp;
+                            return expr;
+                        }
+                    }
+                    if (try_peek(TokenType::less) && try_peek(TokenType::eq, 1)) {
+                        consume();
+                        consume();
+                        if (const auto int_expr_rhs = parse_int_expr()) {
+                            const auto NodeLEOp = m_allocator.alloc<NodeBoolOpLE>();
+                            NodeLEOp->lhs = int_expr_lhs.value();
+                            NodeLEOp->rhs = int_expr_rhs.value();
+                            const auto NodeOp = m_allocator.alloc<NodeBoolExprOp>();
+                            NodeOp->var = NodeLEOp;
+                            const auto expr = m_allocator.alloc<NodeBoolExpr>();
+                            expr->var = NodeOp;
+                            return expr;
+                        }
+                    }
+                }
+         return {};
+     }
+
     std::optional<NodeScope*> parse_scope() {
-         if (peek().has_value() && peek().value().Type == TokenType::open_curly) {
+         if (try_peek(TokenType::open_curly)) {
              consume();
              const auto stmt_scope = m_allocator.alloc<NodeScope>();
              while (auto node_stmt = parse_stmt()) {
@@ -299,9 +662,9 @@ public:
      }
 
     std::optional<NodeIfPred*> parse_if_pred() {
-         if (peek().has_value() && peek().value().Type == TokenType::_else) {
+         if (try_peek(TokenType::_else)) {
              consume();
-             if (peek().has_value() && peek().value().Type == TokenType::_if) {
+             if (try_peek(TokenType::_if)) {
                  consume();
                  try_consume(TokenType::open_parent, "No '(' after if");
                  const auto if_pred = m_allocator.alloc<NodeIfPred>();
@@ -338,7 +701,7 @@ public:
      }
 
     std::optional<NodeStmt*> parse_stmt() {
-         if (peek().has_value() && peek().value().Type == TokenType::exit) {
+         if (try_peek(TokenType::exit)) {
             consume();
             try_consume(TokenType::open_parent, "Bruh! No open parenthesis.");
             if (const auto node_expr = parse_int_expr()) {
@@ -354,7 +717,7 @@ public:
             exit(EXIT_FAILURE);
 
         }
-         if (peek().has_value() && peek().value().Type == TokenType::_int) {
+         if (try_peek(TokenType::_int)) {
             consume();
             const Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
@@ -370,7 +733,23 @@ public:
             std::cout << "Bruh! No value after = T_T ";
             exit(EXIT_FAILURE);
         }
-         if (peek().has_value() && peek().value().Type == TokenType::_if) {
+         if (try_peek(TokenType::_bool)) {
+             consume();
+             const Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
+             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
+             if (const auto node_bool_expr = parse_bool_expr()) {
+                 try_consume(TokenType::semi, "Bruh! No semi.");
+                 const auto node_bool = m_allocator.alloc<NodeStmtBool>();
+                 node_bool->expr = node_bool_expr.value();
+                 node_bool->ident = ident;
+                 const auto stmt = m_allocator.alloc<NodeStmt>();
+                 stmt->var = node_bool;
+                 return stmt;
+             }
+             std::cout << "Bruh! invalid expr! \n";
+             exit(EXIT_FAILURE);
+         }
+         if (try_peek(TokenType::_if)) {
              consume();
              try_consume(TokenType::open_parent, "Bruh! No open parenthesis.");
              const auto stmt_if = m_allocator.alloc<NodeStmtIf>();
@@ -395,7 +774,7 @@ public:
              stmt->var = scope.value();
              return stmt;
          }
-         if (peek().has_value() && peek().value().Type == TokenType::ident) {
+         if (try_peek(TokenType::ident)) {
              const auto stmt = m_allocator.alloc<NodeStmt>();
              if (peek(1).has_value() && peek(1).value().Type == TokenType::eq){
                  const auto node_var_reassign = m_allocator.alloc<NodeStmtVarReassignment>();
@@ -407,10 +786,16 @@ public:
                      stmt->var = node_var_reassign;
                      return stmt;
                  }
+                 if (const auto node_expr = parse_bool_expr()) {
+                     try_consume(TokenType::semi, "Bruh! No semi.");
+                     node_var_reassign->expr = node_expr.value();
+                     stmt->var = node_var_reassign;
+                     return stmt;
+                 }
                  std::cout << "Bruh! Invalid expr in reassignment.";
                  exit(EXIT_FAILURE);
              }
-             if (peek(1).has_value() && peek(1).value().Type == TokenType::plus && peek(2).has_value() && peek(2).value().Type == TokenType::plus) {
+             if (try_peek(TokenType::plus, 1) && try_peek(TokenType::plus,2)) {
                  const auto node_var_inc = m_allocator.alloc<NodeVarInc>();
                  node_var_inc->ident = consume();
                  consume();
@@ -419,7 +804,7 @@ public:
                  stmt->var = node_var_inc;
                  return stmt;
              }
-             if (peek(1).has_value() && peek(1).value().Type == TokenType::minus && peek(2).has_value() && peek(2).value().Type == TokenType::minus) {
+             if (try_peek(TokenType::minus, 1) && try_peek(TokenType::minus,2)) {
                  const auto node_var_dec = m_allocator.alloc<NodeVarDec>();
                  node_var_dec->ident = consume();
                  consume();
@@ -428,7 +813,7 @@ public:
                  stmt->var = node_var_dec;
                  return stmt;
              }
-             if (peek(1).has_value() && peek(1).value().Type == TokenType::plus && peek(2).has_value() && peek(2).value().Type == TokenType::eq) {
+             if (try_peek(TokenType::plus, 1) && try_peek(TokenType::eq, 2)) {
                  const auto node_instOp = m_allocator.alloc<NodeStmtInstOp>();
                  const auto node_instAdd = m_allocator.alloc<NodeInstAdd>();
                  node_instAdd->ident = consume();
@@ -442,7 +827,7 @@ public:
                      return stmt;
                  }
              }
-             if (peek(1).has_value() && peek(1).value().Type == TokenType::minus && peek(2).has_value() && peek(2).value().Type == TokenType::eq) {
+             if (try_peek(TokenType::minus, 1) && try_peek(TokenType::eq,2)) {
                  const auto node_instOp = m_allocator.alloc<NodeStmtInstOp>();
                  const auto node_instSub = m_allocator.alloc<NodeInstSub>();
                  node_instSub->ident = consume();
@@ -456,7 +841,7 @@ public:
                      return stmt;
                  }
              }
-             if (peek(1).has_value() && peek(1).value().Type == TokenType::star && peek(2).has_value() && peek(2).value().Type == TokenType::eq) {
+             if (try_peek(TokenType::star, 1) && try_peek(TokenType::eq,2)) {
                  const auto node_instOp = m_allocator.alloc<NodeStmtInstOp>();
                  const auto node_instMul = m_allocator.alloc<NodeInstMul>();
                  node_instMul->ident = consume();
@@ -470,7 +855,7 @@ public:
                      return stmt;
                  }
              }
-             if (peek(1).has_value() && peek(1).value().Type == TokenType::fslash && peek(2).has_value() && peek(2).value().Type == TokenType::eq) {
+             if (try_peek(TokenType::fslash, 1) && try_peek(TokenType::eq,2)) {
                  const auto node_instOp = m_allocator.alloc<NodeStmtInstOp>();
                  const auto node_instDiv = m_allocator.alloc<NodeInstDiv>();
                  node_instDiv->ident = consume();
@@ -485,7 +870,7 @@ public:
                  }
              }
          }
-         if (peek().has_value() && peek().value().Type == TokenType::repeat) {
+         if (try_peek(TokenType::repeat)) {
              consume();
              try_consume(TokenType::open_parent, "Bruh! No '('");
              if (const auto node_expr = parse_int_expr()) {
@@ -502,23 +887,25 @@ public:
              std::cout << "Bruh! invalid expr! \n";
              exit(EXIT_FAILURE);
          }
-         if (peek().has_value() && peek().value().Type == TokenType::_bool) {
-             consume();
-             const Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
-             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
-             if (const auto node_bool_expr = parse_bool_expr()) {
-                 try_consume(TokenType::semi, "Bruh! No semi.");
-                 const auto node_bool = m_allocator.alloc<NodeStmtBool>();
-                 node_bool->expr = node_bool_expr.value();
-                 node_bool->ident = ident;
-                 const auto stmt = m_allocator.alloc<NodeStmt>();
-                 stmt->var = node_bool;
-                 return stmt;
+         if (try_peek(TokenType::_while)) {
+            consume();
+             try_consume(TokenType::open_parent, "Bruh! No '('");
+             if (const auto node_expr = parse_bool_expr()) {
+                 try_consume(TokenType::close_parent, "Bruh! No ')'");
+                 if (const auto scope = parse_scope()) {
+                     const auto NodeWhile = m_allocator.alloc<NodeStmtWhile>();
+                     NodeWhile->expr = node_expr.value();
+                     NodeWhile->scope = scope.value();
+                     const auto stmt = m_allocator.alloc<NodeStmt>();
+                     stmt->var = NodeWhile;
+                     return stmt;
+                 }
+                 std::cout << "Bruh! invalid scope! \n";
+                 exit(EXIT_FAILURE);
              }
              std::cout << "Bruh! invalid expr! \n";
              exit(EXIT_FAILURE);
          }
-
         return {};
 
     }
@@ -555,11 +942,21 @@ private:
     }
 
     Token try_consume(const TokenType type, const std::string& msg) {
-        if (peek().has_value() && peek().value().Type == type) {
+        if (try_peek(type)) {
             return consume();
         }
         std::cout << msg << std::endl;
         exit(EXIT_FAILURE);
+    }
+    [[nodiscard]] bool try_peek(const TokenType type, const int offset = 0) const{
+        if (!peek(offset).has_value()) {
+            std::cout << "Bruh! Token outside the range! T_T ";
+            exit(EXIT_FAILURE);
+        }
+        if (peek(offset).has_value() && peek(offset).value().Type == type) {
+            return true;
+        }
+        return false;
     }
     size_t m_index = 0;
     const std::vector<Token> m_tokens;

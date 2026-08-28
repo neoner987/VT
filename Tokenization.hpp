@@ -33,11 +33,17 @@ enum class TokenType {
     _if,
     _else,
     repeat,
+    _while,
     bool_lit,
-    _bool
+    _bool,
+    ampersand,
+    bar,
+    exclamation,
+    more,
+    less
 };
 
-inline std::optional<int> bin_prec(TokenType type) {
+inline std::optional<int> int_op_prec(TokenType type) {
     switch (type) {
         case TokenType::plus:
         case TokenType::minus:
@@ -45,6 +51,17 @@ inline std::optional<int> bin_prec(TokenType type) {
         case TokenType::star:
         case TokenType::fslash:
             return 1;
+        default:
+            return {};
+    }
+}
+
+inline std::optional<int> bool_op_prec(TokenType type) {
+    switch (type) {
+        case TokenType::ampersand:
+            return 1;
+        case TokenType::bar:
+            return 0;
         default:
             return {};
     }
@@ -109,6 +126,10 @@ public:
                         tokens.push_back(Token(TokenType::repeat));
                         buffer.clear();
                     }
+                    else if (buffer == "поки") {
+                        tokens.push_back(Token(TokenType::_while));
+                        buffer.clear();
+                    }
                     else if (buffer == "булеве") {
                         tokens.push_back(Token(TokenType::_bool));
                         buffer.clear();
@@ -144,9 +165,24 @@ public:
             }else if (peek().value() == ';') {
                 tokens.push_back(Token(TokenType::semi));
                 consume();
+            }else if (peek().value() == '&') {
+                tokens.push_back(Token(TokenType::ampersand));
+                consume();
+            }else if (peek().value() == '|') {
+                tokens.push_back(Token(TokenType::bar));
+                consume();
+            }else if (peek().value() == '!') {
+                tokens.push_back(Token(TokenType::exclamation));
+                consume();
             }else if (peek().value() ==  '+') {
                 consume();
                 tokens.push_back(Token(TokenType::plus));
+            }else if (peek().value() ==  '>') {
+                consume();
+                tokens.push_back(Token(TokenType::more));
+            }else if (peek().value() ==  '<') {
+                consume();
+                tokens.push_back(Token(TokenType::less));
             }else if (peek().value() ==  '*') {
                 consume();
                 if (peek().has_value() && peek().value() == '*' && peek(1).has_value() && peek(1).value() == '*') {
