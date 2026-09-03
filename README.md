@@ -9,9 +9,8 @@ it has:
 exit statement:  
 вийти(69);
 
-scope statement:  
-{
-    any statement
+scope statement: {  
+&emsp;&emsp;any statement  
 }
 
 variables:  
@@ -22,29 +21,24 @@ variables:
 булеве біб = правда;  
 
 if statement:  
-якщо ( правда )
-{  
-    any statements  
+якщо ( правда ) {    
+&emsp;&emsp;any statements   
 }  
 
 else if predicate:
-якщо ( хиба && !біб)  
-{    
-    any statements  
+якщо ( хиба && !біб) {    
+&emsp;&emsp;any statements  
 }    
-інак якщо (біб)  
-{  
-    any statements  
+інак якщо (біб) {  
+&emsp;&emsp;any statements  
 }  
-інак   
-{  
-    any statements  
+інак {  
+&emsp;&emsp;any statements  
 }
 
 loop statement:
-повторити(10)  
-{  
-    any statements  
+повтори (10) {  
+&emsp;&emsp;any statements  
 }  
   
 
@@ -53,5 +47,5 @@ comments:
 *** comment...  
 
 /*   
-more comments  
+&emsp;&emsp;more comments  
 */
