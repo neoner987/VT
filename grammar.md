@@ -17,6 +17,8 @@ $$
 [\text{VarDecrement}] \\ 
 [\text{InstOp}] \\
 [\text{Repeat}] \\
+[\text{While}] \\
+[\text{Print}] \\
 
 \end{cases} \\
 
@@ -44,7 +46,7 @@ null\\
 
 \text{Bool\_lit} \\
 \text{int\_lit} \\
-\text{ident}
+\text{ident} \\
 
 \end{cases}\\
 
@@ -98,6 +100,8 @@ null\\
 \end{cases}\\
 
 [\text{Repeat}] &\to \text{повторити}([\text{Expr}]) [\text{Scope}] \\
+[\text{While}] &\to \text{поки} ([\text{BoolExpr}])[\text{Scope}]\\
+[\text{Print}]  &\to \text{скажи}(\text{string}); \\
 
 
 [\text{BoolOpExpr}] &\to
@@ -139,6 +143,7 @@ null\\
 \end{cases}\\
 
 [\text{BoolParentExpr}] &\to [\text{BoolExpr}]\\
+
 
 
 \end{align}
