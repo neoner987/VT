@@ -5,6 +5,7 @@
 #include "Tokenization.hpp"
 
 
+
 struct NodeTermIntLit {
     Token int_lit;
 };
@@ -14,13 +15,19 @@ struct NodeTermIdent {
 };
 
 struct NodeIntExpr;
-
-struct NodeTermParent {
+struct NodeTermIntParent {
     NodeIntExpr* expr;
 };
+struct NodeTermInt {
+    std::variant<NodeTermIntLit*, NodeTermIdent*, NodeTermIntParent*> var ;
+};
 
-struct NodeTerm {
-    std::variant<NodeTermIntLit*, NodeTermIdent*, NodeTermParent*> var ;
+struct NodeStr_lit {
+    Token text;
+};
+struct NodeTermStr {
+    std::variant<NodeStr_lit*, NodeTermIdent*> var;
+
 };
 
 struct NodeBoolExpr;
@@ -98,7 +105,7 @@ struct NodeBinExpr {
     std::variant<NodeBinExprAdd*, NodeBinExprSub*, NodeBinExprMult*, NodeBinExprDiv*> var;
 };
 struct NodeIntExpr {
-    std::variant<NodeTerm*, NodeBinExpr*> var;
+    std::variant<NodeTermInt*, NodeBinExpr*> var;
 };
 
 struct NodeStmtExit {
@@ -109,10 +116,13 @@ struct NodeStmtInt {
     Token ident;
     NodeIntExpr* expr;
 };
-
 struct NodeStmtBool {
     Token ident;
     NodeBoolExpr* expr;
+};
+struct NodeStmtStr {
+    Token ident;
+    NodeTermStr* term;
 };
 
 struct NodeStmt;
@@ -181,9 +191,22 @@ struct NodeStmtWhile {
     NodeScope* scope;
 };
 
+struct NodeStmtPrint {
+    NodeTermStr* arg;
+    std::optional<Token> bool_lit;
+};
+
+struct NodeClass {
+    Token ident;
+};
+
+struct NodeStmtMethod {
+    Token ident;
+};
+
 struct NodeStmt {
-    std::variant<NodeStmtExit*, NodeStmtInt*, NodeStmtBool*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*
-        , NodeVarInc*, NodeVarDec*, NodeStmtInstOp*, NodeStmtRepeat*, NodeStmtWhile*> var;
+    std::variant<NodeStmtExit*,NodeStmtStr*, NodeStmtInt*, NodeStmtBool*, NodeScope*, NodeStmtIf*, NodeStmtVarReassignment*
+        , NodeVarInc*, NodeVarDec*, NodeStmtInstOp*, NodeStmtRepeat*, NodeStmtWhile*, NodeStmtPrint*, NodeStmtMethod*> var;
 };
 
 struct NodeProg {
@@ -199,18 +222,36 @@ public:
 
     }
 
-    std::optional<NodeTerm*> parse_int_term() {
+    std::optional<NodeTermStr*> parse_term_str() {
+         if (try_peek(TokenType::text)) {
+             const auto node_str = m_allocator.alloc<NodeStr_lit>();
+             node_str->text = consume();
+             const auto term = m_allocator.alloc<NodeTermStr>();
+             term->var = node_str;
+             return term;
+         }
+         if (try_peek(TokenType::ident)) {
+             const auto node_ident = m_allocator.alloc<NodeTermIdent>();
+             node_ident->ident = consume();
+             const auto term = m_allocator.alloc<NodeTermStr>();
+             term->var = node_ident;
+             return term;
+         }
+         return {};
+     }
+
+    std::optional<NodeTermInt*> parse_int_term() {
         if (try_peek(TokenType::int_lit)) {
             const auto node_expr_int_lit = m_allocator.alloc<NodeTermIntLit>();
             node_expr_int_lit->int_lit = consume();
-            const auto term = m_allocator.alloc<NodeTerm>();
+            const auto term = m_allocator.alloc<NodeTermInt>();
             term->var = node_expr_int_lit;
             return term;
         }
         if (try_peek(TokenType::ident)) {
             const auto node_ident = m_allocator.alloc<NodeTermIdent>();
             node_ident->ident = consume();
-            const auto term = m_allocator.alloc<NodeTerm>();
+            const auto term = m_allocator.alloc<NodeTermInt>();
             term->var = node_ident;
             return term;
         }
@@ -222,8 +263,8 @@ public:
                  exit(EXIT_FAILURE);
              }
              try_consume(TokenType::close_parent, "Bruh! Parent doesnt close!");
-             const auto term = m_allocator.alloc<NodeTerm>();
-             const auto parent_term = m_allocator.alloc<NodeTermParent>();
+             const auto term = m_allocator.alloc<NodeTermInt>();
+             const auto parent_term = m_allocator.alloc<NodeTermIntParent>();
              parent_term->expr = expr.value();
              term->var = parent_term;
              return term;
@@ -232,7 +273,7 @@ public:
     }
 
     std::optional<NodeIntExpr*> parse_int_expr(const int min_prec = 0) {
-         std::optional<NodeTerm*> term_lhs = parse_int_term();
+         std::optional<NodeTermInt*> term_lhs = parse_int_term();
          if (!term_lhs.has_value()) {
              return {};
          }
@@ -749,6 +790,22 @@ public:
              std::cout << "Bruh! invalid expr! \n";
              exit(EXIT_FAILURE);
          }
+         if (try_peek(TokenType::_string)) {
+             consume();
+             const Token ident = try_consume(TokenType::ident, "Bruh! Invalid or no ident.");
+             try_consume(TokenType::eq, "Bruh! No = after ident T_T ");
+             if (const auto node_str_term = parse_term_str()){
+                 const auto node_str = m_allocator.alloc<NodeStmtStr>();
+                 node_str->term = node_str_term.value();
+                 try_consume(TokenType::semi, "Bruh! No semi.");
+                 node_str->ident = ident;
+                 const auto stmt = m_allocator.alloc<NodeStmt>();
+                 stmt->var = node_str;
+                 return stmt;
+             }
+             std::cout << "Bruh! invalid expr! \n";
+             exit(EXIT_FAILURE);
+         }
          if (try_peek(TokenType::_if)) {
              consume();
              try_consume(TokenType::open_parent, "Bruh! No open parenthesis.");
@@ -905,6 +962,31 @@ public:
              }
              std::cout << "Bruh! invalid expr! \n";
              exit(EXIT_FAILURE);
+         }
+         if (try_peek(TokenType::print)) {
+             consume();
+             try_consume(TokenType::open_parent, "Bruh! No '('");
+             if ( const auto node_str = parse_term_str()) {
+                 if (try_peek(TokenType::coma)){
+                     consume();
+                     const auto node_print = m_allocator.alloc<NodeStmtPrint>();
+                     node_print->arg = node_str.value();
+                     node_print->bool_lit = try_consume(TokenType::bool_lit, "Bruh! No bool_lit.");
+                     try_consume(TokenType::close_parent, "Bruh! No '')'");
+                     try_consume(TokenType::semi, "Bruh! No ';' after print;");
+                     const auto stmt = m_allocator.alloc<NodeStmt>();
+                     stmt->var = node_print;
+                     return stmt;
+                 }
+                 try_consume(TokenType::close_parent, "Bruh! No '')'");
+                 try_consume(TokenType::semi, "Bruh! No ';' after print;");
+                 const auto node_print = m_allocator.alloc<NodeStmtPrint>();
+                 node_print->arg = node_str.value();
+                 const auto stmt = m_allocator.alloc<NodeStmt>();
+                 stmt->var = node_print;
+                 return stmt;
+             }
+
          }
         return {};
 

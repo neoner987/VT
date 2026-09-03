@@ -40,7 +40,12 @@ enum class TokenType {
     bar,
     exclamation,
     more,
-    less
+    less,
+    print,
+    text,
+    _string,
+    coma,
+    _class
 };
 
 inline std::optional<int> int_op_prec(TokenType type) {
@@ -114,6 +119,14 @@ public:
                         tokens.push_back(Token(TokenType::_int));
                         buffer.clear();
                     }
+                    else if (buffer == "булеве") {
+                        tokens.push_back(Token(TokenType::_bool));
+                        buffer.clear();
+                    }
+                    else if (buffer == "рядок") {
+                        tokens.push_back(Token(TokenType::_string));
+                        buffer.clear();
+                    }
                     else if (buffer == "якщо") {
                         tokens.push_back(Token(TokenType::_if));
                         buffer.clear();
@@ -122,7 +135,7 @@ public:
                         tokens.push_back(Token(TokenType::_else));
                         buffer.clear();
                     }
-                    else if (buffer == "повторити") {
+                    else if (buffer == "повтори") {
                         tokens.push_back(Token(TokenType::repeat));
                         buffer.clear();
                     }
@@ -130,8 +143,12 @@ public:
                         tokens.push_back(Token(TokenType::_while));
                         buffer.clear();
                     }
-                    else if (buffer == "булеве") {
-                        tokens.push_back(Token(TokenType::_bool));
+                    else if (buffer == "скажи") {
+                        tokens.push_back(Token(TokenType::print));
+                        buffer.clear();
+                    }
+                    else if (buffer == "клас") {
+                        tokens.push_back(Token(TokenType::_class));
                         buffer.clear();
                     }
                     else if (buffer == "правда" || buffer == "хиба") {
@@ -142,6 +159,18 @@ public:
                         tokens.push_back(Token(TokenType::ident, buffer));
                         buffer.clear();
                     }
+                }
+                if (isAscii(peek().value()) && !isdigit(peek().value())) {
+                    while (peek().has_value() && (isCyrillicLetter(peek().value(), peek(1).value()) || isdigit(peek().value()))) {
+                        if ((isCyrillicLetter(peek().value(), peek(1).value())) ){
+                            buffer.push_back(consume());
+                            buffer.push_back(consume());
+                        } else if (isdigit(peek().value()) || isAscii(peek().value())) {
+                            buffer.push_back(consume());
+                        }
+                    }
+                    tokens.push_back(Token(TokenType::ident, buffer));
+                    buffer.clear();
                 }
             }
             if (isdigit(peek().value())) {
@@ -183,6 +212,14 @@ public:
             }else if (peek().value() ==  '<') {
                 consume();
                 tokens.push_back(Token(TokenType::less));
+            } else if (peek().value() == '"') {
+                consume();
+                while (peek().value() != '"') {
+                    buffer.push_back(consume());
+                }
+                consume();
+                tokens.push_back(Token(TokenType::text, buffer));
+                buffer.clear();
             }else if (peek().value() ==  '*') {
                 consume();
                 if (peek().has_value() && peek().value() == '*' && peek(1).has_value() && peek(1).value() == '*') {
@@ -220,6 +257,9 @@ public:
             }else if (peek().value() ==  '}') {
                 consume();
                 tokens.push_back(Token(TokenType::close_curly));
+            }else if (peek().value() ==  ',') {
+                consume();
+                tokens.push_back(Token(TokenType::coma));
             } else if (isspace(peek().value())) {
                 consume();
             } else {
